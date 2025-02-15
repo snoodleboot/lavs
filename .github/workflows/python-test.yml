@@ -43,4 +43,4 @@ jobs:
     - name: Test with nose2
       run: |
         poetry install --with test
-        nose2
+        poetry run nose2
