@@ -17,6 +17,8 @@ logger = logging.getLogger("lavs-api")
 def root():
     logger.info("test")
     return "lavs"
+
+
 #
 #
 # @app.get("/versions/read")

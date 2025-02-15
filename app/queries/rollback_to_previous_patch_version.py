@@ -18,7 +18,7 @@ async def rollback_to_previous_patch_version(product_name: str) -> Dict:
             (
                 f"INSERT INTO Versions "
                 f"(major, minor, patch_version, product_name, id) "
-                f"VALUES ({latest_version_result['major']}, {latest_version_result['minor']}, {latest_version_result['patch_version']+1}, '{product_name}', nextval('version_id_seq'))"
+                f"VALUES ({latest_version_result['major']}, {latest_version_result['minor']}, {latest_version_result['patch_version'] + 1}, '{product_name}', nextval('version_id_seq'))"
             )
         )
         new_latest_version = await retrieve_latest_version(product_name=product_name)

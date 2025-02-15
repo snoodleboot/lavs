@@ -18,7 +18,7 @@ async def create_patch(product_name: str) -> Dict:
             (
                 f"INSERT INTO Versions "
                 f"(major, minor, patch1, product_name, id) "
-                f"VALUES ({latest_version_result['major']}, {latest_version_result['minor']}, {latest_version_result['patch']+1}, '{product_name}', nextval('version_id_seq'))"
+                f"VALUES ({latest_version_result['major']}, {latest_version_result['minor']}, {latest_version_result['patch'] + 1}, '{product_name}', nextval('version_id_seq'))"
             )
         )
         new_latest_version = await retrieve_latest_version(product_name=product_name)
