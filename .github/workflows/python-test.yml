@@ -33,7 +33,7 @@ jobs:
         pipx ensurepath
         pipx install poetry==2.0.1
         pipx install flake8
-        poetry install
+        poetry install --with test
     - name: Lint with flake8
       run: |
         # stop the build if there are Python syntax errors or undefined names
