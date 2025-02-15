@@ -33,7 +33,6 @@ jobs:
         pipx ensurepath
         pipx install poetry==2.0.1
         pipx install flake8
-        pipx install nose2
         poetry install
     - name: Lint with flake8
       run: |
@@ -43,4 +42,4 @@ jobs:
         flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
     - name: Test with pytest
       run: |
-        python -m unittest discover
+        nose2
