@@ -2,7 +2,6 @@ from unittest import TestCase
 
 from app.models.crud.read_model import ReadModel
 
-
 class TestReadModel(TestCase):
     def setUp(self):
         pass
