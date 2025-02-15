@@ -3,13 +3,11 @@
 
 name: Python application
 
-#on:
-#  push:
-#    branches:
-#      - main
-#      - 'feature/**'
-
-on: push
+on:
+  push:
+    branches:
+      - main
+      - 'feature/**'
 
 permissions:
   contents: read
