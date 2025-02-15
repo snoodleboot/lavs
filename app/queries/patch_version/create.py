@@ -6,7 +6,7 @@ import duckdb
 from app.queries.retrieve_latest_version import retrieve_latest_version
 
 
-async def create_next_patch_version(product_name: str) -> Dict:
+async def create_patch(product_name: str) -> Dict:
     logger = logging.getLogger()
     conn = None
     try:
