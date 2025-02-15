@@ -5,10 +5,9 @@ name: Python application
 
 on:
   push:
-    branches: [ $default-branch ]
-  pull_request:
-    branches: [ $default-branch ]
-
+    branches:
+      - main
+      - 'feature*'
 permissions:
   contents: read
 
