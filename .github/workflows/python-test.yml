@@ -7,7 +7,7 @@ name: Python application
 #  push:
 #    branches:
 #      - main
-#      - 'feature*'
+#      - 'feature/**'
 
 on: push
 
