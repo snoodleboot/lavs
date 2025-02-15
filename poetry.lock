@@ -171,6 +171,22 @@ files = [
 all = ["flake8 (>=7.1.1)", "mypy (>=1.11.2)", "pytest (>=8.3.2)", "ruff (>=0.6.2)"]
 
 [[package]]
+name = "nose2"
+version = "0.15.1"
+description = "unittest with plugins"
+optional = false
+python-versions = ">=3.8"
+groups = ["test"]
+files = [
+    {file = "nose2-0.15.1-py3-none-any.whl", hash = "sha256:564450c0c4f1602dfe171902ceb4726cc56658af7a620ae1826f1ffc86b09a86"},
+    {file = "nose2-0.15.1.tar.gz", hash = "sha256:36770f519df5becd3cbfe0bee4abbfbf9b9f6b4eb4e03361d282b7efcfc4f0df"},
+]
+
+[package.extras]
+coverage-plugin = ["coverage"]
+dev = ["sphinx", "sphinx-issues", "sphinx-rtd-theme"]
+
+[[package]]
 name = "numpy"
 version = "2.2.3"
 description = "Fundamental package for array computing in Python"
@@ -567,4 +583,4 @@ standard = ["colorama (>=0.4)", "httptools (>=0.6.3)", "python-dotenv (>=0.13)",
 [metadata]
 lock-version = "2.1"
 python-versions = "^3.13"
-content-hash = "c532541d055451c0c68a9d247632a8316b289aa7eebe4eb269bec5406e8524f3"
+content-hash = "36cc64dbe4d561497bec396c2b0b1fc0ce25aa78d937524c2ae5757fa5187518"
