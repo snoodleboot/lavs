@@ -14,7 +14,7 @@ async def get_next_patch_version(product_name: str) -> Dict:
 
         latest_version_result = await retrieve_latest_version(product_name=product_name)
 
-        latest_version_result['patch'] += 1
+        latest_version_result["patch"] += 1
     finally:
         print("oops...")
         if conn:

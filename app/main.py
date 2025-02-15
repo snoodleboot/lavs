@@ -47,8 +47,8 @@ async def create(data: WriteModel):
 
     return {"result": data}
 
-app.include_router(patch.router)
 
+app.include_router(patch.router)
 
 
 if __name__ == "__main__":

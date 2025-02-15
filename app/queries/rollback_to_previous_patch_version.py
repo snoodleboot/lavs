@@ -6,8 +6,7 @@ import duckdb
 from app.queries.retrieve_latest_version import retrieve_latest_version
 
 
-async def rollback_to_previous_patch_version\
-                (product_name: str) -> Dict:
+async def rollback_to_previous_patch_version(product_name: str) -> Dict:
     logger = logging.getLogger()
     conn = None
     try:
