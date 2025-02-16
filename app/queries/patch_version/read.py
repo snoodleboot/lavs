@@ -3,7 +3,7 @@ from typing import Dict
 
 import duckdb
 
-from app.queries.retrieve_latest_version import retrieve_latest_version
+from app.queries.versions.retrieve_latest_version import retrieve_latest_version
 
 
 async def get_next_patch_version(product_name: str) -> Dict:
@@ -16,6 +16,7 @@ async def get_next_patch_version(product_name: str) -> Dict:
 
         latest_version_result["patch"] += 1
     finally:
+        logger.error("oops")
         print("oops...")
         if conn:
             conn.close()
