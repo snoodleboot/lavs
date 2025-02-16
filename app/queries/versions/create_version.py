@@ -2,8 +2,6 @@ import logging
 import traceback
 from typing import Dict
 
-import duckdb
-
 from app.connections.connection_factory import ConnectionFactory
 from app.queries.versions.retrieve_latest_version import retrieve_latest_version
 

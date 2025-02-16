@@ -22,4 +22,7 @@ async def retrieve_latest_version(product_name: str) -> Dict:
     except:
         print(traceback.format_exc())
 
-    return result[0]
+    if len(result) > 0:
+        return result[0]
+    else:
+        return {}
