@@ -16,7 +16,7 @@ async def get_next_patch_version(product_name: str) -> Dict:
 
         latest_version_result["patch"] += 1
     finally:
-        logger.error('oops')
+        logger.error("oops")
         print("oops...")
         if conn:
             conn.close()

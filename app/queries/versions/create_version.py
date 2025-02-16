@@ -12,7 +12,7 @@ async def create_version(product_name: str, major: int, minor: int, patch: int) 
     logger = logging.getLogger()
 
     try:
-        with ConnectionFactory().retrieve(key='duckdb') as conn:
+        with ConnectionFactory().retrieve(key="duckdb") as conn:
             result = conn.sql(
                 query=(
                     f"INSERT INTO Versions "

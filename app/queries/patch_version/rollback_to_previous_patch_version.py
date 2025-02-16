@@ -14,11 +14,7 @@ async def rollback_to_previous_patch_version(product_name: str) -> Dict:
 
         latest_version_result = await retrieve_latest_version(product_name=product_name)
 
-        conn.sql(
-            (
-                f"DELETE FROM Versions WHERE product_name={1} and patch={1}"
-            )
-        )
+        conn.sql((f"DELETE FROM Versions WHERE product_name={1} and patch={1}"))
         new_latest_version = await retrieve_latest_version(product_name=product_name)
         logger.info(new_latest_version)
     finally:

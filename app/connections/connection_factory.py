@@ -8,12 +8,7 @@ from app.configurations.root_dir import root_dir
 
 
 class ConnectionFactory:
-    __registry = {
-        'duckdb': lambda: duckdb.connect(os.path.join(
-            root_dir(),
-            "test.db"
-        ))
-    }
+    __registry = {"duckdb": lambda: duckdb.connect(os.path.join(root_dir(), "test.db"))}
 
     @contextlib.contextmanager
     def retrieve(self, key) -> Any:

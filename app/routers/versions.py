@@ -23,10 +23,10 @@ async def get_all(data: Any):
 @router.post("/")
 async def create(data: WriteModel):
     await create_version(
-        product_name = data.application_name,
-        major = data.major,
-        minor = data.minor,
-        patch = data.patch,
+        product_name=data.application_name,
+        major=data.major,
+        minor=data.minor,
+        patch=data.patch,
     )
 
     return {"result": data}

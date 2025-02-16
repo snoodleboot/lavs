@@ -13,5 +13,5 @@ class TestConnectionFactory(TestCase):
         pass
 
     def test_retrieve(self):
-        with ConnectionFactory().retrieve(key='duckdb') as conn:
+        with ConnectionFactory().retrieve(key="duckdb") as conn:
             self.assertIsInstance(conn, DuckDBPyConnection)

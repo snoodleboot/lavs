@@ -17,6 +17,7 @@ pydantic = "^2.10.6"
 
 [tool.poetry.group.test.dependencies]
 nose2 = "^0.15.1"
+bandit = "^1.8.2"
 
 [build-system]
 requires = ["poetry-core"]
