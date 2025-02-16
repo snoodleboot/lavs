@@ -3,7 +3,7 @@ from typing import Dict
 
 import duckdb
 
-from app.queries.retrieve_latest_version import retrieve_latest_version
+from app.queries.versions.retrieve_latest_version import retrieve_latest_version
 
 
 async def create_patch(product_name: str) -> Dict:

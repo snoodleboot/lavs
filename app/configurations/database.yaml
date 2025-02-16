@@ -1,0 +1,19 @@
+#TODO: This is going to be used to create the database for all of the enginges - have to build the machinery.
+
+database:
+  table:
+    name: Versions
+    fields:
+      - name: major
+        type: INTEGER
+      - name: minor
+        type: INTEGER
+      - name: patch
+        type: INTEGER
+      - name: product_name
+        type: VARCHAR
+      - name: id
+        type: INTEGER PRIMARY KEY
+
+duck_db:
+  database: test.db
