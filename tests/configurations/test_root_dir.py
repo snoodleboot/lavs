@@ -13,7 +13,14 @@ class TestRoot(TestCase):
 
     def test_root(self):
         result = root_dir()
-        self.assertEqual(
-            result.replace(os.path.dirname(os.path.dirname(result)), ''),
-            r'\lavs\app'
-        )
+        # This will test Windows and Linux = a bit hacky - but the code is hacky right now so fine with it.
+        try:
+            self.assertEqual(
+                result.replace(os.path.dirname(os.path.dirname(result)), ''),
+                r'\lavs\app'
+            )
+        except:
+            self.assertEqual(
+                result.replace(os.path.dirname(os.path.dirname(result)), ''),
+                r'/lavs/app'
+            )
