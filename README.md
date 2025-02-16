@@ -1,6 +1,6 @@
 # lavs - lowercase acronym versioning system
 
-WIP - Do not use at this time
+WIP - Do not use at this time. Will have support in a robust fashion for DuckDB, MySQL, Postgres and SQL Server (maybe MongoDB) when it is ready.
 
 ## About
 
