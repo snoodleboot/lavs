@@ -4,14 +4,14 @@ from app.database.database_manager import DatabaseManager
 from app.queries.versions.create_version import create_version
 
 
-class TestCreateVersion(IsolatedAsyncioTestCase):
+class TestReadLatestVersion(IsolatedAsyncioTestCase):
     def setUp(self):
         DatabaseManager.create_table()
 
     def tearDown(self):
         DatabaseManager.drop_table()
 
-    async def test_create_version(self):
+    async def test_read_latest_version(self):
         product_name = "test"
         major = 1
         minor = 1
