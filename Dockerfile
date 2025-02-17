@@ -9,6 +9,7 @@ ENV POETRY_VIRTUALENVS_CREATE=false
 RUN pip install pipx
 RUN pipx ensurepath
 RUN pipx install poetry==2.1
+RUN poetry --help
 # RUN poetry config virtualenvs.create false
 RUN poetry install
 
