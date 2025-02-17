@@ -6,7 +6,7 @@ COPY pyproject.toml .
 
 RUN pip install pipx
 RUN pipx ensurepath
-RUN pipx install poetry==2.0.1
+RUN pipx install poetry==2.1
 RUN poetry config virtualenvs.create false
 RUN poetry install
 
