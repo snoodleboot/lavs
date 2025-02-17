@@ -67,3 +67,16 @@ jobs:
     - name: Test with nose2
       run: |
         poetry run nose2
+
+  docker:
+
+    needs: unit_test
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          push: false
+          tags: user/app:latest
