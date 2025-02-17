@@ -4,6 +4,9 @@ COPY app .
 COPY poetry.lock .
 COPY pyproject.toml .
 
-RUN pip install pipx && pipx ensurepath && pipx install poetry && poetry install
+RUN pip install pipx
+RUN pipx ensurepath
+RUN pipx install poetry
+RUN poetry install
 
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8080"]
