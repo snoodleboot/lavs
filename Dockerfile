@@ -1,4 +1,4 @@
-FROM python:3.12-bookwork
+FROM python:3.12-bookworm
 
 COPY app .
 COPY poetry.lock .
