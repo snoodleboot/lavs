@@ -1,5 +1,5 @@
 from pydantic import BaseModel
 
 
-class ReadModel(BaseModel):
+class RequestModel(BaseModel):
     pass

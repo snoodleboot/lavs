@@ -1,5 +1,5 @@
 from pydantic import BaseModel
 
 
-class ReadAllModel(BaseModel):
+class ResponseModel(BaseModel):
     pass

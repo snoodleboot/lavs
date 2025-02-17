@@ -1,7 +1,7 @@
 from fastapi import APIRouter
 
-from app.models.patch.write_patch_model import WritePatchModel
-from app.queries.patch_version.read import get_next_patch_version
+from app.models.requests.patch import WritePatchModel
+from app.queries.patch_version.read_current_patch import get_next_patch_version
 from app.queries.patch_version.rollback_to_previous_patch_version import (
     rollback_to_previous_patch_version,
 )

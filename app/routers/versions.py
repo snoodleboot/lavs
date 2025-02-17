@@ -2,7 +2,7 @@ from typing import Any
 
 from fastapi import APIRouter
 
-from app.models.crud.write_model import WriteModel
+from app.models.requests.crud.write_model import WriteModel
 from app.queries.versions.create_version import create_version
 
 router = APIRouter(tags=["versions"], prefix="/versions")

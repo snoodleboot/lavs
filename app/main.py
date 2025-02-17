@@ -4,7 +4,7 @@ import uvicorn
 
 from fastapi import FastAPI
 
-from app.models.crud.write_model import WriteModel
+from app.models.requests.crud.write_model import WriteModel
 from app.queries.versions.create_version import create_version
 from app.queries.versions.retrieve_latest_version import retrieve_latest_version
 from app.queries.versions.retrieve_version_history import retrieve_version_history
