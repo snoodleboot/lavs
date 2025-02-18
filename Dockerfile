@@ -6,6 +6,7 @@ COPY pyproject.toml .EMV
 
 ENV POETRY_VIRTUALENVS_CREATE=false
 
+RUN ls
 RUN pip install pipx
 RUN pipx ensurepath --global --prepend
 RUN pipx install poetry==2.1
