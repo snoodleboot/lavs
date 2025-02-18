@@ -1,8 +1,9 @@
 FROM python:3.12-bookworm
 
-COPY app .
-COPY poetry.lock .
-COPY pyproject.toml .EMV
+WORKDIR app
+COPY app app/
+COPY poetry.lock app/
+COPY pyproject.toml app/
 
 ENV POETRY_VIRTUALENVS_CREATE=false
 
