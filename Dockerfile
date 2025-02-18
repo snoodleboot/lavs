@@ -7,8 +7,7 @@ COPY pyproject.toml app/
 
 ENV POETRY_VIRTUALENVS_CREATE=false
 
-RUN pip install pipx && pipx ensurepath --global --prepend && pipx install poetry==2.1
-RUN poetry --help
+RUN pip install pipx && pipx ensurepath --global --prepend && pipx install poetry==2.1 && poetry --help
 # RUN poetry config virtualenvs.create false
 RUN poetry install
 
