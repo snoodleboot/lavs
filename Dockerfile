@@ -1,4 +1,4 @@
-FROM python:3.12-bookworm
+FROM docker.io/python:3.12-bookworm
 
 WORKDIR app
 COPY app app/
@@ -7,11 +7,7 @@ COPY pyproject.toml app/
 
 ENV POETRY_VIRTUALENVS_CREATE=false
 
-RUN ls
-RUN pip install pipx
-RUN pipx ensurepath --global --prepend
-RUN pipx install poetry==2.1
-RUN pipx list
+RUN pip install pipx && pipx ensurepath --global --prepend && pipx install poetry==2.1
 RUN poetry --help
 # RUN poetry config virtualenvs.create false
 RUN poetry install
