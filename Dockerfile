@@ -1,9 +1,9 @@
 FROM docker.io/python:3.12-bookworm
 
-# WORKDIR app
-# COPY app app/
-# COPY poetry.lock app/
-# COPY pyproject.toml app/
+WORKDIR app
+COPY app app/
+COPY poetry.lock app/
+COPY pyproject.toml app/
 
 ENV POETRY_VIRTUALENVS_CREATE=false
 ENV PIPX_BIN_DIR=/usr/local/bin
