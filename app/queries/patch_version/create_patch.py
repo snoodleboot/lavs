@@ -1,30 +1,27 @@
-import logging
-import traceback
-from typing import Dict
+from typing import Any
 
-import duckdb
-
-from app.connections.connection_factory import ConnectionFactory
-from app.queries.versions.retrieve_latest_version import retrieve_latest_version
+from app.models.requests.request_model import RequestModel
+from app.queries.query import Query
+from app.queries.versions.retrieve_latest_version import RetrieveLatestVersion
 
 
-async def create_patch(product_name: str) -> Dict:
-    logger = logging.getLogger()
-    try:
-        with ConnectionFactory().retrieve(key="duckdb") as conn:
+class CreatePatch(Query):
+    def __init__(self):
+        super().__init__()
+        self._latest_version_query = RetrieveLatestVersion()
 
-            latest_version_result = await retrieve_latest_version(product_name=product_name)
+    async def apply(self, data: RequestModel, conn: Any):
+        latest_version_result = await self._latest_version_query.execute(data=data)
 
-            conn.sql(query=(
-                    f"INSERT INTO Versions "
-                    f"(major, minor, patch, product_name, id) "
-                    f"VALUES ({latest_version_result['major']}, {latest_version_result['minor']}, "
-                    f"{latest_version_result['patch'] + 1}, '{product_name}', nextval('version_id_seq'))"
-                )
+        conn.sql(
+            query=(
+                f"INSERT INTO Versions "
+                f"(major, minor, patch, product_name, id) "
+                f"VALUES ({latest_version_result['major']}, {latest_version_result['minor']}, "
+                f"{latest_version_result['patch'] + 1}, '{data.product_name}', nextval('version_id_seq'))"
             )
-            new_latest_version = await retrieve_latest_version(product_name=product_name)
-            logger.info(new_latest_version)
-    except:
-        print(traceback.format_exc())
+        )
+        new_latest_version = await self._latest_version_query.execute(data=data)
+        self._logger.info(new_latest_version)
 
-    return new_latest_version
+        return new_latest_version

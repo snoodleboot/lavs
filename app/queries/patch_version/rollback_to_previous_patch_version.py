@@ -1,21 +1,18 @@
-import logging
-import traceback
-from typing import Dict
+from typing import Any
 
-import duckdb
-
+from app.models.requests.request_model import RequestModel
+from app.queries.query import Query
 from app.queries.versions.delete_version import delete_version
-from app.queries.versions.retrieve_latest_version import retrieve_latest_version
+from app.queries.versions.retrieve_latest_version import RetrieveLatestVersion
 
 
-async def rollback_to_previous_patch_version(product_name: str) -> Dict:
-    logger = logging.getLogger()
-    try:
-        conn = duckdb.connect("test.db")
+class RollbackToPreviousPatchVersion(Query):
+    def __init__(self):
+        super().__init__()
+        self._latest_version_query = RetrieveLatestVersion()
 
-        latest_version_result = await retrieve_latest_version(product_name=product_name)
+    async def apply(self, data: RequestModel, conn: Any):
+        latest_version_result = await self._latest_version_query.execute(data=data)
         _ = await delete_version(**latest_version_result)
-        previous_version = await retrieve_latest_version(product_name=product_name)
+        previous_version = await self._latest_version_query.execute(data=data)
         return previous_version
-    except:
-        print(traceback.format_exc())

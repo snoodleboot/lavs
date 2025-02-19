@@ -2,4 +2,4 @@ from pydantic import BaseModel
 
 
 class RequestModel(BaseModel):
-    pass
+    product_name: str

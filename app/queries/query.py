@@ -11,13 +11,13 @@ class Query:
     def __init__(self):
         self._logger = getLogger(Configuration().application_name)
 
-    def execute(self, data: RequestModel):
+    async def execute(self, data: RequestModel):
         try:
             with ConnectionFactory().retrieve(key="duckdb") as conn:
-                self.apply(data, conn)
+                await self.apply(data, conn)
         except:
             self._logger.error(traceback.format_exc())
             raise
 
-    def apply(self, data: RequestModel, conn: Any):
+    async def apply(self, data: RequestModel, conn: Any):
         raise NotImplementedError

@@ -18,8 +18,8 @@ class TestRetrieveVersionHistory(IsolatedAsyncioTestCase):
         minor = 1
         patch = 1
         _ = await create_version(product_name, major, minor, patch)
-        _ = await create_version(product_name, major, minor+1, patch)
-        _ = await create_version(product_name, major+1, minor, patch)
+        _ = await create_version(product_name, major, minor + 1, patch)
+        _ = await create_version(product_name, major + 1, minor, patch)
 
         result = await retrieve_version_history(product_name=product_name)
         expected_result = [

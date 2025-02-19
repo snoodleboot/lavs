@@ -1,26 +1,29 @@
-import logging
-import traceback
+from typing import Any
 
-from app.connections.connection_factory import ConnectionFactory
-from app.queries.versions.retrieve_latest_version import retrieve_latest_version
+from app.models.requests.application_and_version_model import (
+    ApplicationAndVersionNameModel,
+)
+from app.queries.query import Query
+from app.queries.versions.retrieve_latest_version import RetrieveLatestVersion
 
 
-async def delete_version(product_name: str, major: int, minor: int, patch: int) -> bool:
-    logger = logging.getLogger()
+class DeleteVersion(Query):
+    def __init__(self):
+        super().__init__()
+        self._latest_version_query = RetrieveLatestVersion()
 
-    try:
-        with ConnectionFactory().retrieve(key="duckdb") as conn:
-            result = await retrieve_latest_version(product_name=product_name)
-            _ = conn.sql(
-                query=(
-                    f"DELETE FROM Versions "
-                    f"WHERE product_name='{product_name}' "
-                    f"AND major={major} "
-                    f"AND minor={minor} "
-                    f"AND patch={patch}"
-                )
+    async def apply(self, data: ApplicationAndVersionNameModel, conn: Any):
+        _ = conn.sql(
+            query=(
+                f"DELETE FROM Versions "
+                f"WHERE product_name='{data.product_name}' "
+                f"AND major={data.major} "
+                f"AND minor={data.minor} "
+                f"AND patch={data.patch
+                }"
             )
-            result = await retrieve_latest_version(product_name=product_name)
-        logger.info(result)
-    except:
-        print(traceback.format_exc())
+        )
+        result = await self._latest_version_query.execute(data=data)
+
+        self._logger.info(result)
+        return result

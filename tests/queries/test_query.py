@@ -14,4 +14,4 @@ class TestQuery(TestCase):
     def test_execute(self):
         query = Query()
         with self.assertRaises(NotImplementedError):
-            query.execute(data=RequestModel(application_name='test'))
+            query.execute(data=RequestModel(application_name="test"))

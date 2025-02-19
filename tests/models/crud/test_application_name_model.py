@@ -12,7 +12,5 @@ class TestRequestModel(TestCase):
         pass
 
     def test_cotr(self):
-        instance = ApplicationNameModel(application_name='test_app')
+        instance = ApplicationNameModel(application_name="test_app")
         self.assertIsInstance(instance, ApplicationNameModel)
-
-

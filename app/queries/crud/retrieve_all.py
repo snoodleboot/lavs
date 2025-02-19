@@ -1,15 +1,14 @@
-from typing import Dict
+from typing import Any
 
-import duckdb
+from app.models.requests.request_model import RequestModel
+from app.queries.query import Query
 
-from app.utils.load_logger import load_logger
 
+class RetrieveAll(Query):
+    def __init__(self):
+        super().__init__()
 
-async def retrieve_all() -> Dict:
-    logger = load_logger()
-    conn = None
-    try:
-        conn = duckdb.connect("test.db")
+    async def apply(self, data: RequestModel, conn: Any):
         result = (
             conn.sql(
                 f"SELECT * FROM Versions WHERE ORDER BY major DESC, minor DESC, patch DESC"
@@ -17,10 +16,5 @@ async def retrieve_all() -> Dict:
             .fetchdf()
             .to_dict("records")
         )
-        logger.info(result)
-    finally:
-        print("oops...")
-        if conn:
-            conn.close()
-
-    return result[0]
+        self._logger.info(result)
+        return result
