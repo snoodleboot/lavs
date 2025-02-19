@@ -4,7 +4,7 @@ import uvicorn
 
 from fastapi import FastAPI
 
-from app.models.requests.crud.write_model import WriteModel
+from app.models.requests.request_model import RequestModel
 from app.queries.versions.create_version import create_version
 from app.queries.versions.retrieve_latest_version import retrieve_latest_version
 from app.queries.versions.retrieve_version_history import retrieve_version_history
@@ -38,7 +38,7 @@ async def read_latest_version(application_name):
 
 
 @app.post("/versions/write")
-async def create(data: WriteModel):
+async def create(data: RequestModel):
     await create_version(
         product_name=data.application_name,
         major=data.major,

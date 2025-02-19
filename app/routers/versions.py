@@ -2,7 +2,7 @@ from typing import Any
 
 from fastapi import APIRouter
 
-from app.models.requests.crud.write_model import WriteModel
+from app.models.requests.request_model import RequestModel
 from app.queries.versions.create_version import create_version
 
 router = APIRouter(tags=["versions"], prefix="/versions")
@@ -21,7 +21,7 @@ async def get_all(data: Any):
 
 
 @router.post("/")
-async def create(data: WriteModel):
+async def create(data: RequestModel):
     await create_version(
         product_name=data.application_name,
         major=data.major,
