@@ -1,7 +1,8 @@
 from unittest import IsolatedAsyncioTestCase
 
 from app.database.database_manager import DatabaseManager
-from app.queries.versions.create_version import create_version
+from app.models.requests.application_and_version_model import ApplicationAndVersionNameModel
+from app.queries.versions.create_version import CreateVersion
 
 
 class TestReadLatestVersion(IsolatedAsyncioTestCase):
@@ -12,10 +13,10 @@ class TestReadLatestVersion(IsolatedAsyncioTestCase):
         DatabaseManager.drop_table()
 
     async def test_read_latest_version(self):
-        product_name = "test"
-        major = 1
-        minor = 1
-        patch = 1
+        data = ApplicationAndVersionNameModel(
+            product_name = "test",
+            version='1.1.1'
+        )
         expected_result = {
             "major": 1,
             "minor": 1,
@@ -23,5 +24,5 @@ class TestReadLatestVersion(IsolatedAsyncioTestCase):
             "product_name": "test",
             "id": 1,
         }
-        result = await create_version(product_name, major, minor, patch)
+        result = await CreateVersion().execute(data=data)
         self.assertDictEqual(result, expected_result)

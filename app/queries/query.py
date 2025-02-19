@@ -14,10 +14,12 @@ class Query:
     async def execute(self, data: RequestModel):
         try:
             with ConnectionFactory().retrieve(key="duckdb") as conn:
-                await self.apply(data, conn)
+                result = await self.apply(data, conn)
         except:
             self._logger.error(traceback.format_exc())
             raise
+
+        return result
 
     async def apply(self, data: RequestModel, conn: Any):
         raise NotImplementedError

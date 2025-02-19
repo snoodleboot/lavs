@@ -16,11 +16,11 @@ class TestRequestModel(TestCase):
 
     def test_cotr(self):
         instance = ApplicationAndVersionNameModel(
-            application_name="test_app", version="1.2.3"
+            product_name="test_app", version="1.2.3"
         )
         self.assertIsInstance(instance, ApplicationAndVersionNameModel)
         with self.assertRaises(ValueError):
             instance = ApplicationAndVersionNameModel(
-                application_name="test_app", version="1.2.g"
+                product_name="test_app", version="1.2.g"
             )
         self.assertIsInstance(instance, ApplicationAndVersionNameModel)

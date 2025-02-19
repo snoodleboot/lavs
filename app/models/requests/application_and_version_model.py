@@ -8,7 +8,7 @@ from app.models.requests.request_model import RequestModel
 
 
 class ApplicationAndVersionNameModel(RequestModel):
-    application_name: str
+    product_name: str
     version: Optional[str] = None
 
     @field_validator("version", mode="before")
