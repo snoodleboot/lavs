@@ -121,3 +121,74 @@ def test_migration_parity_on_mssql(mssql_env: Any) -> None:
     emitted ``ALTER TABLE ... RENAME TO``, which is not valid T-SQL.
     """
     _assert_migrates_on(BackendFactory().create())
+
+
+# --- Schema qualification (#60) -------------------------------------------
+#
+# `information_schema` is not scoped to the current schema, so the migration's
+# probes constrain `table_schema` explicitly.
+#
+# Constructing a case where that matters takes care. A decoy legacy table in
+# another schema cannot, on its own, trick a *fully initialised* database into
+# migrating: `_should_migrate` reads the row count from the current schema's
+# real `versions` table, and the relational schema's foreign keys mean rows there
+# imply a non-empty `products`. The reachable failure is different — the probe
+# reports a table that the session cannot actually resolve, and the follow-up
+# `SELECT COUNT(*)` then raises.
+#
+# So: plant the decoy, leave the application's own schema empty, and run the
+# migration. Qualified, it is a clean no-op. Unqualified, `_table_exists` says
+# "yes" about a table in someone else's schema and the count blows up.
+
+# MySQL has no decoy test: its schemas *are* databases, and the throwaway
+# container's `test` user is not granted CREATE DATABASE (it fails with
+# `Access denied ... to database 'lavs_decoy'`). Faking it would mean wiring
+# root credentials through the shared fixture for one assertion. The MySQL
+# `DATABASE()` expression is still covered for non-regression by the three
+# migration parity tests above.
+
+#: A second schema used only to hold the decoy table.
+_DECOY_SCHEMA = "lavs_decoy"
+
+
+def _assert_ignores_other_schema(backend: Backend) -> None:
+    """Plant a legacy-shaped table in another schema; the migration must not see it.
+
+    Args:
+        backend: The backend under test.
+    """
+    with backend.connect() as session:
+        session.execute(f"CREATE SCHEMA {_DECOY_SCHEMA}")
+        session.execute(
+            f"CREATE TABLE {_DECOY_SCHEMA}.{LegacySchema.SOURCE_TABLE} ("
+            "id INTEGER, major INTEGER, minor INTEGER, patch INTEGER, "
+            f"{LegacySchema.PRODUCT_NAME_COLUMN} VARCHAR(255), status VARCHAR(50))"
+        )
+        session.execute(
+            f"INSERT INTO {_DECOY_SCHEMA}.{LegacySchema.SOURCE_TABLE} "
+            f"(id, major, minor, patch, {LegacySchema.PRODUCT_NAME_COLUMN}, status) "
+            "VALUES (?, ?, ?, ?, ?, ?)",
+            (1, 9, 9, 9, "decoy", "active"),
+        )
+
+        # The application's own schema is deliberately still empty. Unqualified
+        # probes see the decoy and raise; qualified probes see nothing and the
+        # migration is a clean no-op.
+        FlatToRelationalMigration(backend).run(session)
+
+        # Nothing was created from the decoy's data.
+        backend.init_schema(session)
+        assert _count(session, "products") == 0
+        assert _count(session, "versions") == 0
+
+
+@pytest.mark.postgres
+def test_migration_ignores_other_schema_on_postgres(pg_env: Any) -> None:
+    """A legacy-shaped table in another PostgreSQL schema must be invisible."""
+    _assert_ignores_other_schema(BackendFactory().create())
+
+
+@pytest.mark.mssql
+def test_migration_ignores_other_schema_on_mssql(mssql_env: Any) -> None:
+    """A legacy-shaped table in another SQL Server schema must be invisible."""
+    _assert_ignores_other_schema(BackendFactory().create())

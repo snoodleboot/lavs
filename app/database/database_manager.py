@@ -2,6 +2,7 @@
 
 import os
 
+from app.backends.backend import Backend
 from app.backends.backend_factory import BackendFactory
 from app.configurations.configuration import load_database_config
 from app.connections.db_session import DbSession
@@ -20,10 +21,18 @@ class DatabaseManager:
     #: literal at the call site.
     PRODUCTS_TABLE = "products"
 
-    #: Portable listing of the current database's tables. ``information_schema``
-    #: is understood by both DuckDB and PostgreSQL, so this replaces DuckDB's
+    #: Portable listing of the current schema's tables. ``information_schema`` is
+    #: understood by every supported backend, so this replaces DuckDB's
     #: dialect-specific ``SHOW ALL TABLES``.
-    _LIST_TABLES_SQL = "SELECT table_name FROM information_schema.tables"
+    #:
+    #: Constrained to the session's own schema: ``information_schema`` spans every
+    #: visible database on MySQL, and every schema in the database on PostgreSQL
+    #: and SQL Server. Unqualified, :meth:`drop_tables` could see a same-named
+    #: table belonging to something else. ``{schema}`` is filled from
+    #: :meth:`Backend.current_schema_expression`, a dialect constant.
+    _LIST_TABLES_SQL = (
+        "SELECT table_name FROM information_schema.tables WHERE table_schema = {schema}"
+    )
 
     @classmethod
     def _ddl_text(cls) -> str:
@@ -56,13 +65,19 @@ class DatabaseManager:
         return [table.name for table in config.database.tables]
 
     @classmethod
-    def _existing_tables(cls, session: DbSession) -> list[str]:
+    def _existing_tables(cls, session: DbSession, backend: Backend) -> list[str]:
         """Return the names of the tables currently present, lower-cased.
 
         Names are lower-cased so membership checks are case-insensitive across
         dialects (DuckDB preserves the declared case in ``information_schema``).
+
+        Args:
+            session: A live session to introspect.
+            backend: The backend owning the session, supplying the dialect
+                expression that scopes the listing to the current schema.
         """
-        rows = session.execute(cls._LIST_TABLES_SQL).fetchall()
+        sql = cls._LIST_TABLES_SQL.format(schema=backend.current_schema_expression())
+        rows = session.execute(sql).fetchall()
         return [str(row[0]).lower() for row in rows]
 
     @classmethod
@@ -79,7 +94,7 @@ class DatabaseManager:
         with backend.connect() as session:
             backend.init_schema(session)
 
-            existing = cls._existing_tables(session)
+            existing = cls._existing_tables(session, backend)
             for table_name in cls._table_names():
                 assert table_name in existing, f"Expected table '{table_name}' to exist after init."
 
@@ -93,7 +108,7 @@ class DatabaseManager:
         """
         backend = BackendFactory().create()
         with backend.connect() as session:
-            existing = cls._existing_tables(session)
+            existing = cls._existing_tables(session, backend)
             for table_name in reversed(cls._table_names()):
                 if table_name in existing:
                     session.execute(f"DROP TABLE {table_name}")

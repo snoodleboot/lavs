@@ -94,6 +94,14 @@ class MySqlBackend(Backend):
         for statement in DdlScript(self.dialect_ddl()).statements():
             session.execute(statement)
 
+    def current_schema_expression(self) -> str:
+        """Return ``DATABASE()`` — MySQL's schemas *are* its databases.
+
+        ``current_schema()`` does not exist in MySQL; the current database is the
+        schema, and ``information_schema.tables.table_schema`` holds its name.
+        """
+        return "DATABASE()"
+
     def dialect_ddl(self) -> str:
         """Return the MySQL DDL script contents."""
         database_package = os.path.dirname(os.path.dirname(__file__))

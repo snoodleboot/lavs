@@ -7,7 +7,8 @@ operations:
   :class:`~app.connections.db_session.DbSession`, closing it on exit;
 * :meth:`init_schema` — materialise the dialect's schema on a session;
 * :meth:`dialect_ddl` — the dialect-specific DDL the schema is built from;
-* :meth:`rename_table` — rename a table in the dialect's own syntax.
+* :meth:`rename_table` — rename a table in the dialect's own syntax;
+* :meth:`current_schema_expression` — the dialect's "which schema am I in" SQL.
 
 Adding a new backend (for example the R1 ``PostgresBackend``) means subclassing
 this and supplying :attr:`name`, :attr:`param_style`, :meth:`connect`, and
@@ -67,6 +68,24 @@ class Backend(ABC):
             session: A live session to run the DDL on.
         """
         session.execute(self.dialect_ddl())
+
+    def current_schema_expression(self) -> str:
+        """Return a SQL expression evaluating to the schema this session is in.
+
+        ``information_schema`` is not scoped to the current schema — on MySQL it
+        spans every visible database, and on PostgreSQL and SQL Server every
+        schema in the database. Introspection queries therefore have to constrain
+        ``table_schema`` explicitly, and the expression that yields "here"
+        differs per dialect.
+
+        The default is ``current_schema()``, which DuckDB and PostgreSQL both
+        understand. MySQL and SQL Server override it.
+
+        Returns:
+            A SQL expression, safe to interpolate into a query (it is a dialect
+            constant, never user input).
+        """
+        return "current_schema()"
 
     def rename_table(self, session: DbSession, old_name: str, new_name: str) -> None:
         """Rename a table, in the dialect the backend speaks.

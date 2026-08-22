@@ -120,6 +120,15 @@ class MssqlBackend(Backend):
         """
         session.execute("EXEC sp_rename ?, ?", (old_name, new_name))
 
+    def current_schema_expression(self) -> str:
+        """Return ``SCHEMA_NAME()`` — T-SQL has no ``current_schema()``.
+
+        ``SCHEMA_NAME()`` with no argument yields the calling user's default
+        schema, which is the schema ``init_schema`` materialises into (``dbo``
+        for the connections this backend opens).
+        """
+        return "SCHEMA_NAME()"
+
     def dialect_ddl(self) -> str:
         """Return the SQL Server DDL script contents."""
         database_package = os.path.dirname(os.path.dirname(__file__))

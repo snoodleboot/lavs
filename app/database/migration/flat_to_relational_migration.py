@@ -13,15 +13,24 @@ from app.models.types.ulid_id import new_ulid
 _DEFAULT_COMPONENT_NAME = "default"
 _DEFAULT_COMPONENT_KIND = ComponentKind.SERVICE
 
-# Portable introspection over ``information_schema`` (understood by both DuckDB
-# and PostgreSQL). Table names are matched case-insensitively because DuckDB
+# Portable introspection over ``information_schema``, understood by every
+# supported backend. Table names are matched case-insensitively because DuckDB
 # preserves the declared case (the legacy ``Versions`` table) while the codebase
 # refers to the name in lower case.
+#
+# Both queries are constrained to the schema the session is actually in.
+# ``information_schema`` is not so scoped on its own: on MySQL it spans every
+# visible database, and on PostgreSQL and SQL Server every schema in the
+# database — so without the predicate an unrelated ``versions`` table elsewhere
+# on the same server can satisfy the legacy-shape check. ``{schema}`` is filled
+# from :meth:`Backend.current_schema_expression`, a dialect constant.
 _COLUMNS_FOR_TABLE_SQL = (
-    "SELECT column_name FROM information_schema.columns WHERE lower(table_name) = lower(?)"
+    "SELECT column_name FROM information_schema.columns "
+    "WHERE lower(table_name) = lower(?) AND table_schema = {schema}"
 )
 _TABLE_EXISTS_SQL = (
-    "SELECT 1 FROM information_schema.tables WHERE lower(table_name) = lower(?) LIMIT 1"
+    "SELECT 1 FROM information_schema.tables "
+    "WHERE lower(table_name) = lower(?) AND table_schema = {schema} LIMIT 1"
 )
 
 
@@ -92,12 +101,14 @@ class FlatToRelationalMigration:
         Returns:
             The column names, lower-cased; empty when the table is absent.
         """
-        rows = session.execute(_COLUMNS_FOR_TABLE_SQL, [table]).fetchall()
+        sql = _COLUMNS_FOR_TABLE_SQL.format(schema=self._backend.current_schema_expression())
+        rows = session.execute(sql, [table]).fetchall()
         return [str(row[0]).lower() for row in rows]
 
     def _table_exists(self, session: DbSession, table: str) -> bool:
         """Return whether ``table`` is present in the current database."""
-        return session.execute(_TABLE_EXISTS_SQL, [table]).fetchone() is not None
+        sql = _TABLE_EXISTS_SQL.format(schema=self._backend.current_schema_expression())
+        return session.execute(sql, [table]).fetchone() is not None
 
     def _row_count(self, session: DbSession, table: str) -> int:
         """Return the number of rows in ``table``, or ``0`` when it is absent.
