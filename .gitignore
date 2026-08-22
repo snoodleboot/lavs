@@ -178,5 +178,12 @@ cython_debug/
 .idea/
 /app/test.db
 
-# Session-management working files (never committed, per .claude/conventions/core/general.md)
+# Agent configuration and session-management working files. Both are developer
+# tooling, not product source, and are shared from the workspace root rather than
+# carried in this OSS repo.
+#
+# `.prompticorn/` was already listed here, but its files had been committed before
+# the rule existed — and .gitignore does not untrack what is already tracked, so
+# the rule was inert and those files stayed public until they were `git rm --cached`ed.
+.claude/
 .prompticorn/

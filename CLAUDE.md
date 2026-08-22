@@ -1,5 +1,13 @@
 # Claude Configuration
 
+> **Note on paths.** The `.claude/` tree this file refers to is developer tooling and is
+> no longer carried in this repository — it lives one level up, in the shared workspace
+> root alongside the sibling `lavs-ee` and `lavs-site` checkouts, so a single copy serves
+> all three. Claude Code discovers it by walking up from the working directory, so the
+> references below resolve normally in a configured workspace. They will not resolve in a
+> bare clone of this repository, which is expected: the agent configuration is not part of
+> the product.
+
 **Last Updated:** 2026-06-23  
 **Agent Count:** 24 primary agents  
 **Persona:** Software Engineer

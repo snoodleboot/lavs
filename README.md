@@ -20,7 +20,7 @@ Furthermore, this is a starting step to a bigger picture to help track complex a
 lavs v1 ships as a REST API plus the Constellation UI, in two editions selected purely by deploy config:
 
 - **OSS (default)** — password + session auth (signup, email verification, optional domain allow-list) and/or an `X-API-Key` for headless clients (`LAVS_AUTH_MODES=password,apikey`).
-- **EE (fast-follow, shipped)** — managed identity via Stytch (email magic links + Google/GitHub OAuth) behind the same pluggable auth abstraction; enable with `LAVS_EDITION=ee` and `stytch` in `LAVS_AUTH_MODES`. To verify an EE deployment against a real Stytch tenant, follow the manual smoke procedure in [docs/ops/STYTCH_MANUAL_SMOKE.md](docs/ops/STYTCH_MANUAL_SMOKE.md).
+- **EE (fast-follow, shipped)** — managed identity via Stytch (email magic links + Google/GitHub OAuth) behind the same pluggable auth abstraction; enable with `LAVS_EDITION=ee` and `stytch` in `LAVS_AUTH_MODES`. To verify an EE deployment against a real Stytch tenant, follow the manual smoke procedure that ships with the EE distribution.
 
 For operations, the API exposes `GET /health` (liveness) and `GET /ready` (readiness) — the targets for the Helm chart's probes — and `GET /meta`, which reports the running edition and enabled auth modes so clients render the right login.
 
