@@ -89,6 +89,11 @@ jobs:
 
   frontend-e2e:
     runs-on: ubuntu-latest
+    # Hard cap. Without this the job inherits GitHub's 360-minute default, so a
+    # hung browser or a preview server that never answers would burn six hours of
+    # runner time before being killed. A healthy run is well under a minute; the
+    # slowest legitimate case is a cold cache re-downloading Chromium.
+    timeout-minutes: 10
     # Playwright e2e: smoke, the constellation cut-release flow, and the only
     # accessibility checks anywhere in CI.
     #
