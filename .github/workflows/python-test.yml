@@ -87,6 +87,59 @@ jobs:
         working-directory: frontend/ui
         run: pnpm build
 
+  frontend-e2e:
+    runs-on: ubuntu-latest
+    # Playwright e2e: smoke, the constellation cut-release flow, and the only
+    # accessibility checks anywhere in CI.
+    #
+    # No backend is involved — `playwright.config.ts` serves a built app through
+    # `vite preview` and intercepts the API in-browser with MSW, so the run is
+    # deterministic. Live SSE is deliberately not mocked (a service worker cannot
+    # do it reliably) and is covered by the hook/reducer unit tests instead; the
+    # resulting proxy errors in the log are expected, not failures.
+    #
+    # The browser is cached on the resolved Playwright version, so the ~150MB
+    # Chromium download happens on a version bump rather than every run. The
+    # tests themselves take ~18s.
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+          cache-dependency-path: frontend/ui/pnpm-lock.yaml
+      - name: Install dependencies
+        working-directory: frontend/ui
+        run: pnpm install --frozen-lockfile
+      - name: Resolve the Playwright version
+        id: playwright
+        working-directory: frontend/ui
+        # Key the browser cache on the exact version, so a Playwright bump
+        # invalidates it instead of silently reusing an incompatible browser.
+        run: echo "version=$(pnpm exec playwright --version | awk '{print $2}')" >> "$GITHUB_OUTPUT"
+      - name: Cache the Playwright browser
+        id: playwright-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.playwright.outputs.version }}
+      - name: Download Chromium
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
+        working-directory: frontend/ui
+        run: pnpm e2e:install
+      - name: Install Chromium system libraries
+        # Always run: the cache restores the browser itself, but its apt
+        # dependencies are part of the runner image, not the cached directory.
+        working-directory: frontend/ui
+        run: pnpm exec playwright install-deps chromium
+      - name: Run the Playwright suite
+        working-directory: frontend/ui
+        run: pnpm e2e
+
   frontend-audit:
     runs-on: ubuntu-latest
 
