@@ -21,6 +21,14 @@
   font-size: 13px;
   font-weight: 600;
   font-family: var(--font-sans);
+  cursor: pointer;
+}
+
+/* SVG elements ignore the global box-shadow ring, so draw a real outline. */
+.laneLabel:focus-visible {
+  outline: 2px solid var(--meridian);
+  outline-offset: 3px;
+  border-radius: 4px;
 }
 
 /* P9 dependency arcs — a quiet spine in the reserved left gutter, painted under the
@@ -43,6 +51,23 @@
 
 .dependencyEdge {
   transition: opacity 0.2s ease;
+  opacity: 0.55;
+}
+
+/* An edge inside the selected component's blast radius. */
+.dependencyEdgeActive {
+  opacity: 1;
+}
+
+.dependencyEdgeActive .edgeArc,
+.dependencyEdgeActive .edgeArrow {
+  stroke: var(--meridian);
+  fill: none;
+  opacity: 1;
+}
+
+.dependencyEdgeActive .edgeArrow {
+  fill: var(--meridian);
 }
 
 .nowLabel {
@@ -117,6 +142,54 @@
   }
 }
 
+/* P9 impact highlight — selecting a component lights its blast radius. */
+.stationSource .stationDot {
+  stroke-dasharray: 3 2.5;
+  stroke-width: 2.5;
+}
+
+.stationImpacted .stationDot {
+  stroke-width: 2.5;
+}
+
+.stationDimmed {
+  opacity: 0.28;
+}
+
+.animated .stationDot {
+  animation: station-glow 1.8s ease-in-out infinite;
+}
+
+@keyframes station-glow {
+  0%,
+  100% {
+    filter: drop-shadow(0 0 3px currentColor);
+  }
+  50% {
+    filter: drop-shadow(0 0 8px currentColor);
+  }
+}
+
+/* P9 level badge: ▲ + the level in words, so colour is never the only signal. */
+.levelBadge {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  font-family: var(--font-sans);
+}
+
+.levelMajor {
+  fill: var(--danger);
+}
+
+.levelMinor {
+  fill: var(--warn);
+}
+
+.levelPatch {
+  fill: var(--patch);
+}
+
 /* rolled back — recede and strike through */
 .stationRolledBack {
   opacity: 0.4;
@@ -155,5 +228,9 @@
   .station,
   .dependencyEdge {
     transition: none;
+  }
+
+  .animated .stationDot {
+    animation: none;
   }
 }

@@ -48,6 +48,12 @@ export const LABEL_COLUMN_LEFT = LABEL_ANCHOR_X - LABEL_MAX_WIDTH;
 export const GUTTER_DEPTH = 24;
 
 /**
+ * Vertical offset of a station's level badge (P9 impact / change_level). It sits *below* the
+ * dot because the `cy - 13` slot above already carries the version label.
+ */
+export const BADGE_DY = 20;
+
+/**
  * The exact width a lane label is rendered at (via SVG `textLength`), bounded by
  * `LABEL_MAX_WIDTH`. Deriving it from the name length keeps the guarantee "no glyph left of
  * `LABEL_COLUMN_LEFT`" deterministic and testable, which a CSS width cap cannot be on SVG text.

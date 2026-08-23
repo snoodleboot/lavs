@@ -1,10 +1,10 @@
 import type { ReactNode } from 'react';
 
 import { formatVersion } from '@/lib';
-import type { ComponentWithVersions } from '@/types';
+import type { ChangeLevel, ComponentWithVersions } from '@/types';
 
 import { xOf, yOf, type TimeAxis } from './geometry';
-import { Station } from './station';
+import { Station, type ImpactState } from './station';
 import styles from './constellation-view.module.css';
 
 /** A component's horizontal timeline: its stream line, stations and pinned connector. */
@@ -19,6 +19,14 @@ export interface StreamProps {
   readonly meridianX: number;
   readonly freshVersionIds: ReadonlySet<string>;
   readonly rolledBackVersionIds: ReadonlySet<string>;
+  /** P9 impact state for this lane — applied to the pinned station only. */
+  readonly impactState?: ImpactState;
+  /** P9 projected change level for this lane — applied to the pinned station only. */
+  readonly impactLevel?: ChangeLevel | null;
+  /** P9 change level of the PINNED version in the latest cut release. */
+  readonly changeLevel?: ChangeLevel | null;
+  /** JS seam for `prefers-reduced-motion`. */
+  readonly animated?: boolean;
 }
 
 export function Stream(props: StreamProps): ReactNode {
@@ -33,6 +41,10 @@ export function Stream(props: StreamProps): ReactNode {
     meridianX,
     freshVersionIds,
     rolledBackVersionIds,
+    impactState,
+    impactLevel = null,
+    changeLevel = null,
+    animated = false,
   } = props;
 
   const y = yOf(laneIndex, laneCount);
@@ -75,6 +87,9 @@ export function Stream(props: StreamProps): ReactNode {
 
       {component.versions.map((version) => {
         const versionTick = axis.tickOf(version.id);
+        // Release-frozen and impact state are version-scoped: only the station the meridian
+        // pins carries them, so scrubbing never smears a badge across history.
+        const isPinned = version.id === pinnedVersionId;
         return (
           <Station
             key={version.id}
@@ -83,10 +98,14 @@ export function Stream(props: StreamProps): ReactNode {
             cx={xOf(versionTick, maxTick)}
             cy={y}
             hue={hue}
-            pinned={version.id === pinnedVersionId}
+            pinned={isPinned}
             reached={versionTick <= tick}
             fresh={freshVersionIds.has(version.id)}
             rolledBack={rolledBackVersionIds.has(version.id)}
+            impactState={isPinned ? impactState : undefined}
+            impactLevel={isPinned ? impactLevel : null}
+            changeLevel={isPinned ? changeLevel : null}
+            animated={animated}
           />
         );
       })}
