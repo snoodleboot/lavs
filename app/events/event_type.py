@@ -14,3 +14,5 @@ class EventType(StrEnum):
     VERSION_CREATED = "version.created"
     VERSION_ROLLED_BACK = "version.rolled_back"
     RELEASE_CUT = "release.cut"
+    DEPENDENCY_ADDED = "dependency.added"
+    DEPENDENCY_REMOVED = "dependency.removed"

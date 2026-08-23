@@ -4,6 +4,8 @@ from unittest import IsolatedAsyncioTestCase
 
 from app.errors.conflict_error import ConflictError
 from app.errors.not_found_error import NotFoundError
+from app.events.event_bus import EventBus
+from app.events.event_type import EventType
 from app.models.types.ulid_id import new_ulid
 from app.queries.component_dependencies.add_dependency_query import AddDependencyQuery
 from app.queries.component_dependencies.create_dependency_request import (
@@ -114,6 +116,28 @@ class TestAddDependencyQuery(IsolatedAsyncioTestCase):
         # Act / Assert
         with self.assertRaises(ConflictError):
             await AddDependencyQuery().execute(data=data, connection=conn)
+
+    async def test_publishes_dependency_added_event(self) -> None:
+        """A successful add publishes a dependency.added event for the product."""
+        # Arrange
+        conn = make_connection()
+        product_id = seed_product(conn)
+        from_id = seed_component(conn, product_id, "api")
+        to_id = seed_component(conn, product_id, "core")
+        bus = EventBus()
+        queue = bus.subscribe(product_id)
+        data = CreateDependencyRequest(
+            product_id=product_id, from_component_id=from_id, to_component_id=to_id
+        )
+
+        # Act
+        await AddDependencyQuery(bus).execute(data=data, connection=conn)
+
+        # Assert
+        event = queue.get_nowait()
+        self.assertEqual(event.event_type, EventType.DEPENDENCY_ADDED)
+        self.assertEqual(event.product_id, product_id)
+        self.assertEqual(event.data["dependency"]["from_component_id"], from_id)
 
     async def test_cycle_raises_conflict(self) -> None:
         """An edge that would close a cycle is rejected as 409."""

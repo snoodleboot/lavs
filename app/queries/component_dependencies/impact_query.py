@@ -57,7 +57,7 @@ class ImpactQuery(Query[ImpactResponseModel]):
         component_ids = [
             str(row[0]) for row in conn.execute(_SELECT_COMPONENTS, [data.product_id]).fetchall()
         ]
-        own_levels = {component_id: BumpLevel.NONE for component_id in component_ids}
+        own_levels = dict.fromkeys(component_ids, BumpLevel.NONE)
         own_levels[data.component_id] = BumpLevel.MAJOR
 
         edges = [

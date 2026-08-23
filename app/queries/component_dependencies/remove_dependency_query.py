@@ -2,6 +2,9 @@
 
 from app.connections.db_session import DbSession
 from app.errors.not_found_error import NotFoundError
+from app.events.domain_event import DomainEvent
+from app.events.event_bus import EventBus
+from app.events.event_type import EventType
 from app.queries.component_dependencies.remove_dependency_request import (
     RemoveDependencyRequest,
 )
@@ -15,7 +18,21 @@ _DELETE_EDGE = "DELETE FROM component_dependencies WHERE id = ?"
 
 
 class RemoveDependencyQuery(Query[None]):
-    """Delete one ``from -> to`` dependency edge, or 404 when it is absent."""
+    """Delete one ``from -> to`` dependency edge, or 404 when it is absent.
+
+    When an :class:`EventBus` is supplied, a ``dependency.removed`` domain event
+    is published for the product after the edge is deleted.
+    """
+
+    def __init__(self, event_bus: EventBus | None = None) -> None:
+        """Create the query, optionally wired to an event bus.
+
+        Args:
+            event_bus: The event bus to publish ``dependency.removed`` on, or
+                ``None`` to run without emitting events.
+        """
+        super().__init__()
+        self._event_bus = event_bus
 
     async def apply(self, data: RemoveDependencyRequest, conn: DbSession) -> None:
         """Remove the identified edge.
@@ -40,4 +57,21 @@ class RemoveDependencyQuery(Query[None]):
                     "to_component_id": data.to_component_id,
                 },
             )
-        conn.execute(_DELETE_EDGE, [str(row[0])])
+        edge_id = str(row[0])
+        conn.execute(_DELETE_EDGE, [edge_id])
+
+        if self._event_bus is not None:
+            await self._event_bus.publish(
+                DomainEvent(
+                    event_type=EventType.DEPENDENCY_REMOVED,
+                    product_id=data.product_id,
+                    data={
+                        "dependency": {
+                            "id": edge_id,
+                            "product_id": data.product_id,
+                            "from_component_id": data.from_component_id,
+                            "to_component_id": data.to_component_id,
+                        }
+                    },
+                )
+            )

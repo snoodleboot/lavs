@@ -15,6 +15,8 @@ from fastapi import Query as QueryParam
 from app.auth.require_principal import require_principal
 from app.connections.db_dependency import get_db_connection
 from app.connections.db_session import DbSession
+from app.events.event_bus import EventBus
+from app.events.event_bus_dependency import get_event_bus
 from app.models.requests.create_dependency_model import CreateDependencyModel
 from app.models.requests.create_product_model import CreateProductModel
 from app.models.requests.request_model import RequestModel
@@ -51,6 +53,7 @@ router = APIRouter(
 )
 
 DbConnection = Annotated[DbSession, Depends(get_db_connection)]
+Bus = Annotated[EventBus, Depends(get_event_bus)]
 
 
 @router.get("", response_model=list[ProductResponseModel])
@@ -203,6 +206,7 @@ async def add_product_dependency(
     product_id: str,
     body: CreateDependencyModel,
     conn: DbConnection,
+    event_bus: Bus,
 ) -> DependencyResponseModel:
     """Add a dependency edge (``from`` depends on ``to``) to a product's graph.
 
@@ -224,7 +228,7 @@ async def add_product_dependency(
         from_component_id=body.from_component_id,
         to_component_id=body.to_component_id,
     )
-    return await AddDependencyQuery().execute(data=request, connection=conn)
+    return await AddDependencyQuery(event_bus).execute(data=request, connection=conn)
 
 
 @router.delete(
@@ -234,6 +238,7 @@ async def add_product_dependency(
 async def remove_product_dependency(
     product_id: str,
     conn: DbConnection,
+    event_bus: Bus,
     from_component_id: Annotated[str, QueryParam(alias="from")],
     to_component_id: Annotated[str, QueryParam(alias="to")],
 ) -> None:
@@ -253,4 +258,4 @@ async def remove_product_dependency(
         from_component_id=from_component_id,
         to_component_id=to_component_id,
     )
-    await RemoveDependencyQuery().execute(data=request, connection=conn)
+    await RemoveDependencyQuery(event_bus).execute(data=request, connection=conn)

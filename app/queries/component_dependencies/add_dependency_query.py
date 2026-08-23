@@ -4,6 +4,9 @@ from app.connections.db_session import DbSession
 from app.domain.dependency_graph import would_create_cycle
 from app.errors.conflict_error import ConflictError
 from app.errors.not_found_error import NotFoundError
+from app.events.domain_event import DomainEvent
+from app.events.event_bus import EventBus
+from app.events.event_type import EventType
 from app.models.responses.dependency_response_model import DependencyResponseModel
 from app.models.types.ulid_id import new_ulid
 from app.queries.component_dependencies.create_dependency_request import (
@@ -42,7 +45,21 @@ class AddDependencyQuery(Query[DependencyResponseModel]):
     duplicate, or one that would close a cycle. Each failure surfaces as a typed
     :class:`NotFoundError` (404) or :class:`ConflictError` (409) rather than a raw
     constraint violation.
+
+    When an :class:`EventBus` is supplied, a ``dependency.added`` domain event is
+    published for the product after the edge is inserted; the returned response is
+    unaffected either way.
     """
+
+    def __init__(self, event_bus: EventBus | None = None) -> None:
+        """Create the query, optionally wired to an event bus.
+
+        Args:
+            event_bus: The event bus to publish ``dependency.added`` on, or
+                ``None`` to run without emitting events.
+        """
+        super().__init__()
+        self._event_bus = event_bus
 
     async def apply(
         self, data: CreateDependencyRequest, conn: DbSession
@@ -109,7 +126,18 @@ class AddDependencyQuery(Query[DependencyResponseModel]):
         )
         row = conn.execute(_SELECT_CREATED, [edge_id]).fetchone()
         assert row is not None, "The dependency edge just inserted was not found."
-        return DependencyResponseMapper.to_model(row)
+        dependency = DependencyResponseMapper.to_model(row)
+
+        if self._event_bus is not None:
+            await self._event_bus.publish(
+                DomainEvent(
+                    event_type=EventType.DEPENDENCY_ADDED,
+                    product_id=data.product_id,
+                    data={"dependency": dependency.model_dump(mode="json")},
+                )
+            )
+
+        return dependency
 
     def _assert_component(self, conn: DbSession, product_id: str, component_id: str) -> None:
         """Assert ``component_id`` exists and belongs to ``product_id``.
