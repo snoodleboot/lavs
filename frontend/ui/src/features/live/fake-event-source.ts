@@ -30,11 +30,12 @@ export class FakeEventSource {
 
   /** Dispatch a named SSE event; `data` (if given) is JSON-encoded onto `event.data`. */
   emit(type: string, data?: unknown): void {
-    const event = {
-      type,
-      data: data === undefined ? '' : JSON.stringify(data),
-    } as MessageEvent;
+    this.emitRaw(type, data === undefined ? '' : JSON.stringify(data));
+  }
 
+  /** Dispatch a named SSE event with a verbatim `event.data` — for malformed-frame tests. */
+  emitRaw(type: string, data: string): void {
+    const event = { type, data } as MessageEvent;
     for (const listener of this.listeners.get(type) ?? []) {
       listener(event);
     }

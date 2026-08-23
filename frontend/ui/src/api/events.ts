@@ -1,4 +1,4 @@
-import type { Release, Version } from '@/types';
+import type { Dependency, Release, Version } from '@/types';
 
 import { API_BASE } from './http';
 
@@ -18,10 +18,24 @@ export interface ReleaseCutEvent {
   readonly release: Release;
 }
 
+export interface DependencyAddedEvent {
+  readonly dependency: Dependency;
+}
+
+/** A removal only identifies the edge; the server omits `created_at` (contract §6). */
+export interface DependencyRemovedEvent {
+  readonly dependency: Pick<
+    Dependency,
+    'id' | 'product_id' | 'from_component_id' | 'to_component_id'
+  >;
+}
+
 export interface ProductEventHandlers {
   readonly onVersionCreated?: (event: VersionCreatedEvent) => void;
   readonly onVersionRolledBack?: (event: VersionRolledBackEvent) => void;
   readonly onReleaseCut?: (event: ReleaseCutEvent) => void;
+  readonly onDependencyAdded?: (event: DependencyAddedEvent) => void;
+  readonly onDependencyRemoved?: (event: DependencyRemovedEvent) => void;
   readonly onError?: (error: Event) => void;
   readonly onOpen?: () => void;
 }
@@ -80,6 +94,16 @@ export function subscribeToProductEvents(
     source.addEventListener('release.cut', (event) => {
       const data = parse<ReleaseCutEvent>(event);
       if (data) handlers.onReleaseCut?.(data);
+    });
+
+    source.addEventListener('dependency.added', (event) => {
+      const data = parse<DependencyAddedEvent>(event);
+      if (data) handlers.onDependencyAdded?.(data);
+    });
+
+    source.addEventListener('dependency.removed', (event) => {
+      const data = parse<DependencyRemovedEvent>(event);
+      if (data) handlers.onDependencyRemoved?.(data);
     });
 
     source.addEventListener('error', (event) => {

@@ -1,10 +1,20 @@
 import { describe, expect, it } from 'vitest';
 
-import type { VersionCreatedEvent, VersionRolledBackEvent } from '@/api';
-import { seedComponents, seedProduct } from '@/mocks';
-import type { Timeline, Version } from '@/types';
+import type {
+  DependencyAddedEvent,
+  DependencyRemovedEvent,
+  VersionCreatedEvent,
+  VersionRolledBackEvent,
+} from '@/api';
+import { SEED_PRODUCT_ID, seedComponents, seedDependencies, seedProduct } from '@/mocks';
+import type { Dependency, GraphResponse, Timeline, Version } from '@/types';
 
-import { applyVersionCreated, applyVersionRolledBack } from './event-cache';
+import {
+  applyDependencyAdded,
+  applyDependencyRemoved,
+  applyVersionCreated,
+  applyVersionRolledBack,
+} from './event-cache';
 
 function buildTimeline(): Timeline {
   return { product: seedProduct(), components: seedComponents() };
@@ -115,5 +125,109 @@ describe('applyVersionRolledBack', () => {
 
     expect(timeline).toEqual(before);
     expect(next).not.toBe(timeline);
+  });
+});
+
+const NEW_EDGE: Dependency = {
+  id: 'dep-cli-ui',
+  product_id: SEED_PRODUCT_ID,
+  from_component_id: 'comp-cli',
+  to_component_id: 'comp-ui',
+  created_at: '2026-05-13T12:00:00.000Z',
+};
+
+function buildGraph(): GraphResponse {
+  return {
+    product_id: SEED_PRODUCT_ID,
+    nodes: seedComponents().map(({ id, product_id, name, kind }) => ({
+      id,
+      product_id,
+      name,
+      kind,
+    })),
+    edges: seedDependencies(),
+  };
+}
+
+describe('applyDependencyAdded', () => {
+  it('appends exactly one edge', () => {
+    const graph = buildGraph();
+
+    const next = applyDependencyAdded(graph, { dependency: NEW_EDGE });
+
+    expect(next.edges).toHaveLength(graph.edges.length + 1);
+    expect(next.edges.at(-1)).toEqual(NEW_EDGE);
+  });
+
+  it('ignores a duplicate id so a replayed frame never double-draws an arc', () => {
+    const graph = buildGraph();
+    const duplicate: DependencyAddedEvent = { dependency: graph.edges[0]! };
+
+    const next = applyDependencyAdded(graph, duplicate);
+
+    expect(next.edges).toHaveLength(graph.edges.length);
+    expect(next).toBe(graph);
+  });
+
+  it('does not mutate the input graph', () => {
+    const graph = buildGraph();
+    const before = structuredClone(graph);
+
+    const next = applyDependencyAdded(graph, { dependency: NEW_EDGE });
+
+    expect(graph).toEqual(before);
+    expect(next).not.toBe(graph);
+    expect(next.edges).not.toBe(graph.edges);
+  });
+});
+
+describe('applyDependencyRemoved', () => {
+  it('removes only the matching edge', () => {
+    const graph = buildGraph();
+    const event: DependencyRemovedEvent = {
+      dependency: {
+        id: 'dep-ui-api',
+        product_id: SEED_PRODUCT_ID,
+        from_component_id: 'comp-ui',
+        to_component_id: 'comp-api',
+      },
+    };
+
+    const next = applyDependencyRemoved(graph, event);
+
+    expect(next.edges.map((edge) => edge.id)).toEqual(['dep-cli-api', 'dep-helm-ui']);
+  });
+
+  it('is a no-op for an id the graph does not hold', () => {
+    const graph = buildGraph();
+    const event: DependencyRemovedEvent = {
+      dependency: {
+        id: 'dep-nope',
+        product_id: SEED_PRODUCT_ID,
+        from_component_id: 'comp-ui',
+        to_component_id: 'comp-api',
+      },
+    };
+
+    expect(applyDependencyRemoved(graph, event).edges).toHaveLength(graph.edges.length);
+  });
+
+  it('does not mutate the input graph', () => {
+    const graph = buildGraph();
+    const before = structuredClone(graph);
+    const event: DependencyRemovedEvent = {
+      dependency: {
+        id: 'dep-ui-api',
+        product_id: SEED_PRODUCT_ID,
+        from_component_id: 'comp-ui',
+        to_component_id: 'comp-api',
+      },
+    };
+
+    const next = applyDependencyRemoved(graph, event);
+
+    expect(graph).toEqual(before);
+    expect(next).not.toBe(graph);
+    expect(next.edges).not.toBe(graph.edges);
   });
 });

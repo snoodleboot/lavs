@@ -1,8 +1,13 @@
 // Pure, immutable reducers that fold live SSE events into the timeline cache.
 // Never mutate their inputs — TanStack Query relies on referential change to re-render.
 
-import type { VersionCreatedEvent, VersionRolledBackEvent } from '@/api';
-import type { ComponentWithVersions, Timeline, Version } from '@/types';
+import type {
+  DependencyAddedEvent,
+  DependencyRemovedEvent,
+  VersionCreatedEvent,
+  VersionRolledBackEvent,
+} from '@/api';
+import type { ComponentWithVersions, GraphResponse, Timeline, Version } from '@/types';
 
 /**
  * Append the created version to its component, mark it `active`, and demote the
@@ -53,4 +58,24 @@ function addVersionToComponent(
   const appended: Version = { ...incoming, status: 'active' };
 
   return { ...component, versions: [...demoted, appended] };
+}
+
+/**
+ * Append a live dependency edge to the graph cache, ignoring a duplicate id (SSE frames can
+ * arrive twice, and REST reconciliation must not double-draw an arc). Returns a new graph.
+ */
+export function applyDependencyAdded(
+  graph: GraphResponse,
+  event: DependencyAddedEvent,
+): GraphResponse {
+  if (graph.edges.some((edge) => edge.id === event.dependency.id)) return graph;
+  return { ...graph, edges: [...graph.edges, event.dependency] };
+}
+
+/** Drop a removed dependency edge from the graph cache. Returns a new graph. */
+export function applyDependencyRemoved(
+  graph: GraphResponse,
+  event: DependencyRemovedEvent,
+): GraphResponse {
+  return { ...graph, edges: graph.edges.filter((edge) => edge.id !== event.dependency.id) };
 }

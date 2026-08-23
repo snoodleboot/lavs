@@ -6,5 +6,6 @@ export { CutReleaseButton } from './cut-release-button';
 export type { CutReleaseButtonProps } from './cut-release-button';
 export { ReleaseLedger } from './release-ledger';
 export type { ReleaseLedgerProps } from './release-ledger';
+export { formatBumpRationale } from './bump-rationale';
 export { frozenManifestOf } from './frozen-manifest';
 export type { FrozenManifestEntry } from './frozen-manifest';

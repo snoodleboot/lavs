@@ -9,6 +9,7 @@ import styles from './constellation-view.module.css';
 export type ImpactState = 'source' | 'impacted' | 'dimmed';
 
 const LEVEL_CLASS: Readonly<Record<ChangeLevel, string>> = {
+  // `noUncheckedIndexedAccess` widens CSS-module lookups to `string | undefined`.
   major: styles.levelMajor ?? '',
   minor: styles.levelMinor ?? '',
   patch: styles.levelPatch ?? '',

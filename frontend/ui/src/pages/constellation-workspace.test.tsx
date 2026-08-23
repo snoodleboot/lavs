@@ -89,6 +89,44 @@ describe('ConstellationWorkspace', () => {
     expect(apiLabel).toHaveAttribute('aria-pressed', 'false');
   });
 
+  it('shows the cut release bump and per-version change levels, gated to "now"', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(
+      <ConstellationWorkspace
+        productId="prod-aurora"
+        timeline={seedTimeline()}
+        onSelectProduct={() => {}}
+      />,
+    );
+
+    // Nothing cut yet → no bump badge.
+    expect(screen.queryByTestId('bump-level')).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: /cut release/i }));
+
+    await waitFor(() => expect(screen.getByTestId('bump-level')).toHaveTextContent('▲ minor'));
+    // Shaped, not raw JSON.
+    expect(screen.getByTestId('bump-rationale').textContent).not.toContain('{');
+
+    // The pinned api version is in the release with change_level 'minor'; helm's is null.
+    await waitFor(() =>
+      expect(screen.getByTestId('station-comp-api-v4')).toHaveAttribute(
+        'data-change-level',
+        'minor',
+      ),
+    );
+    expect(screen.getByTestId('station-comp-helm-v2')).not.toHaveAttribute('data-change-level');
+    // Historical versions in the same lane never inherit the badge.
+    expect(screen.getByTestId('station-comp-api-v0')).not.toHaveAttribute('data-change-level');
+
+    // Scrub off "now": the bump belongs to a cut release, so the card must stop claiming it.
+    const slider = screen.getByRole('slider', { name: /release meridian/i });
+    slider.focus();
+    await user.keyboard('{ArrowLeft}');
+    await waitFor(() => expect(screen.queryByTestId('bump-level')).not.toBeInTheDocument());
+    expect(screen.queryByTestId('bump-rationale')).not.toBeInTheDocument();
+  });
+
   it('scrubs the meridian with the keyboard, updating the tick readout', async () => {
     const user = userEvent.setup();
     renderWithProviders(
