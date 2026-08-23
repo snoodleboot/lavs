@@ -1,7 +1,9 @@
 import type {
+  ChangeLevel,
   Component,
   ComponentKind,
   ComponentWithVersions,
+  Dependency,
   Principal,
   Product,
   Release,
@@ -126,3 +128,52 @@ export function toComponent(component: ComponentWithVersions): Component {
 export function seedReleases(): Release[] {
   return [];
 }
+
+interface DependencySpec {
+  readonly id: string;
+  readonly from: string;
+  readonly to: string;
+}
+
+// "from depends on to": the UI, the CLI and the Helm chart all depend on the API.
+const DEPENDENCY_SPECS: readonly DependencySpec[] = [
+  { id: 'dep-ui-api', from: 'comp-ui', to: 'comp-api' },
+  { id: 'dep-cli-api', from: 'comp-cli', to: 'comp-api' },
+  { id: 'dep-helm-ui', from: 'comp-helm', to: 'comp-ui' },
+];
+
+export function seedDependencies(): Dependency[] {
+  return DEPENDENCY_SPECS.map((spec) => ({
+    id: spec.id,
+    product_id: SEED_PRODUCT_ID,
+    from_component_id: spec.from,
+    to_component_id: spec.to,
+    created_at: '2026-05-12T12:00:00.000Z',
+  }));
+}
+
+/**
+ * Deterministic per-component `change_level` for a mocked cut: the API moved a minor,
+ * everything downstream is contracted to a patch (mirrors the server's propagation).
+ */
+export function seedChangeLevel(componentId: string): ChangeLevel | null {
+  if (componentId === 'comp-api') return 'minor';
+  if (componentId === 'comp-helm') return null;
+  return 'patch';
+}
+
+/**
+ * A realistic `bump_rationale` — the server ships an opaque JSON *string* of this exact
+ * shape (app/queries/releases/cut_release_query.py), never prose.
+ */
+export const SEED_BUMP_RATIONALE: string = JSON.stringify({
+  policy: 'default',
+  product_bump: 'minor',
+  removed_any: false,
+  components: {
+    'comp-api': { own: 'minor', effective: 'minor' },
+    'comp-cli': { own: 'patch', effective: 'patch' },
+    'comp-helm': { own: 'none', effective: 'patch' },
+    'comp-ui': { own: 'patch', effective: 'patch' },
+  },
+});

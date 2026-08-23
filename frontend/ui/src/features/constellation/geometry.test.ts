@@ -3,7 +3,20 @@ import { describe, expect, it } from 'vitest';
 import { seedComponents, seedProduct } from '@/mocks';
 import type { Timeline } from '@/types';
 
-import { LANE_TOP, VIEWBOX, buildTimeAxis, tOfX, xOf, yOf } from './geometry';
+import {
+  GUTTER_DEPTH,
+  LABEL_ANCHOR_X,
+  LABEL_CHAR_WIDTH,
+  LABEL_COLUMN_LEFT,
+  LABEL_MAX_WIDTH,
+  LANE_TOP,
+  VIEWBOX,
+  buildTimeAxis,
+  labelWidth,
+  tOfX,
+  xOf,
+  yOf,
+} from './geometry';
 
 function makeTimeline(): Timeline {
   return { product: seedProduct(), components: seedComponents() };
@@ -86,5 +99,24 @@ describe('coordinate helpers', () => {
     expect(y0).toBeGreaterThan(LANE_TOP);
     expect(y1).toBeGreaterThan(y0);
     expect(y3).toBeGreaterThan(y1);
+  });
+});
+
+describe('the reserved left gutter', () => {
+  it('places the label column left of the lane start and the arc gutter left of that', () => {
+    expect(LABEL_ANCHOR_X).toBeLessThan(VIEWBOX.padLeft);
+    expect(LABEL_COLUMN_LEFT).toBe(LABEL_ANCHOR_X - LABEL_MAX_WIDTH);
+    expect(LABEL_COLUMN_LEFT - GUTTER_DEPTH).toBeGreaterThan(0);
+  });
+});
+
+describe('labelWidth', () => {
+  it('scales with the name length until the column cap', () => {
+    expect(labelWidth('ab')).toBeCloseTo(2 * LABEL_CHAR_WIDTH);
+    expect(labelWidth('a-very-long-component-name')).toBe(LABEL_MAX_WIDTH);
+  });
+
+  it('never returns zero for an empty name', () => {
+    expect(labelWidth('')).toBeCloseTo(LABEL_CHAR_WIDTH);
   });
 });

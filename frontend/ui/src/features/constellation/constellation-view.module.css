@@ -23,6 +23,28 @@
   font-family: var(--font-sans);
 }
 
+/* P9 dependency arcs — a quiet spine in the reserved left gutter, painted under the
+   streams. Non-interactive so they never steal the meridian's pointer capture. */
+.edgeLayer {
+  pointer-events: none;
+}
+
+.edgeArc {
+  fill: none;
+  stroke: var(--line);
+  stroke-width: 1.5;
+  opacity: 0.75;
+}
+
+.edgeArrow {
+  fill: var(--line);
+  opacity: 0.75;
+}
+
+.dependencyEdge {
+  transition: opacity 0.2s ease;
+}
+
 .nowLabel {
   fill: #48597d;
   font-size: 11px;
@@ -130,7 +152,8 @@
     animation: none;
   }
 
-  .station {
+  .station,
+  .dependencyEdge {
     transition: none;
   }
 }

@@ -26,6 +26,36 @@ export const VIEWBOX = {
 /** Top of the first lane, leaving room for the "now" marker and station labels. */
 export const LANE_TOP = VIEWBOX.padTop + 18;
 
+/**
+ * The left gutter is split into two reserved bands so the P9 dependency arcs never cross a
+ * lane-label glyph: the label column `[LABEL_COLUMN_LEFT, LABEL_ANCHOR_X]` and, left of it,
+ * the arc gutter `[LABEL_COLUMN_LEFT - GUTTER_DEPTH, LABEL_COLUMN_LEFT]`.
+ */
+
+/** Lane labels are end-anchored here; their glyphs extend leftward from this x. */
+export const LABEL_ANCHOR_X = VIEWBOX.padLeft - 16;
+
+/** Nominal advance width of one lane-label glyph (13px / weight 600 sans). */
+export const LABEL_CHAR_WIDTH = 7.2;
+
+/** Hard cap on a lane label's rendered width — the column never grows past this. */
+export const LABEL_MAX_WIDTH = 76;
+
+/** Left edge of the label column, i.e. the right edge of the dependency-arc gutter. */
+export const LABEL_COLUMN_LEFT = LABEL_ANCHOR_X - LABEL_MAX_WIDTH;
+
+/** How far left of the label column a dependency arc may bow. */
+export const GUTTER_DEPTH = 24;
+
+/**
+ * The exact width a lane label is rendered at (via SVG `textLength`), bounded by
+ * `LABEL_MAX_WIDTH`. Deriving it from the name length keeps the guarantee "no glyph left of
+ * `LABEL_COLUMN_LEFT`" deterministic and testable, which a CSS width cap cannot be on SVG text.
+ */
+export function labelWidth(name: string): number {
+  return Math.min(LABEL_MAX_WIDTH, Math.max(1, name.length) * LABEL_CHAR_WIDTH);
+}
+
 /** Vertical space allotted to a single component lane. */
 export function laneHeight(laneCount: number): number {
   const usable = VIEWBOX.height - LANE_TOP - VIEWBOX.padBottom;

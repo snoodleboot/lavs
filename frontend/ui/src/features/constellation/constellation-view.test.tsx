@@ -1,11 +1,11 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
-import { seedComponents, seedProduct } from '@/mocks';
+import { seedComponents, seedDependencies, seedProduct } from '@/mocks';
 import type { Timeline } from '@/types';
 
 import { ConstellationView } from './constellation-view';
-import { buildTimeAxis } from './geometry';
+import { LABEL_COLUMN_LEFT, LABEL_MAX_WIDTH, buildTimeAxis, labelWidth } from './geometry';
 
 function makeTimeline(): Timeline {
   return { product: seedProduct(), components: seedComponents() };
@@ -181,6 +181,55 @@ describe('ConstellationView', () => {
     // Far from the right-edge meridian → no scrub.
     firePointer(svg!, 'pointerdown', 130);
     expect(onPositionChange).not.toHaveBeenCalled();
+  });
+
+  it('paints the dependency-edge layer before the first stream', () => {
+    const timeline = makeTimeline();
+    const axis = buildTimeAxis(timeline);
+
+    render(
+      <ConstellationView
+        timeline={timeline}
+        axis={axis}
+        position={axis.maxTick}
+        onPositionChange={vi.fn()}
+        dependencies={seedDependencies()}
+      />,
+    );
+
+    const edges = screen.getByTestId('dependency-edges');
+    const firstStream = screen.getByTestId(`stream-${timeline.components[0]!.id}`);
+    // DOCUMENT_POSITION_FOLLOWING: the streams come after the edges, so stations paint on top.
+    expect(edges.compareDocumentPosition(firstStream) & Node.DOCUMENT_POSITION_FOLLOWING).toBe(
+      Node.DOCUMENT_POSITION_FOLLOWING,
+    );
+    expect(screen.getByTestId('dependency-edge-dep-ui-api')).toBeInTheDocument();
+  });
+
+  it('bounds every lane label to the reserved label column', () => {
+    const timeline = makeTimeline();
+    const axis = buildTimeAxis(timeline);
+
+    const { container } = render(
+      <ConstellationView
+        timeline={timeline}
+        axis={axis}
+        position={axis.maxTick}
+        onPositionChange={vi.fn()}
+      />,
+    );
+
+    for (const component of timeline.components) {
+      const label = screen.getByText(component.name);
+      const width = Number(label.getAttribute('textLength'));
+      expect(width).toBe(labelWidth(component.name));
+      expect(width).toBeLessThanOrEqual(LABEL_MAX_WIDTH);
+      // End-anchored: the leftmost glyph never enters the arc gutter.
+      expect(Number(label.getAttribute('x')) - width).toBeGreaterThanOrEqual(LABEL_COLUMN_LEFT);
+    }
+    expect(container.querySelectorAll('text[text-anchor="end"]').length).toBe(
+      timeline.components.length,
+    );
   });
 
   it('flags fresh and rolled-back stations for non-color signalling', () => {
