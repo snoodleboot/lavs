@@ -10,6 +10,8 @@ database:
           type: VARCHAR
         - name: base_version
           type: VARCHAR
+        - name: bump_policy
+          type: VARCHAR
         - name: created_at
           type: TIMESTAMP
     - name: components
@@ -54,6 +56,10 @@ database:
           type: VARCHAR
         - name: idempotency_key
           type: VARCHAR
+        - name: bump_level
+          type: VARCHAR
+        - name: bump_rationale
+          type: VARCHAR
         - name: created_at
           type: TIMESTAMP
     - name: release_components
@@ -64,6 +70,20 @@ database:
           type: VARCHAR
         - name: version_id
           type: VARCHAR
+        - name: change_level
+          type: VARCHAR
+    - name: component_dependencies
+      fields:
+        - name: id
+          type: VARCHAR PRIMARY KEY
+        - name: product_id
+          type: VARCHAR
+        - name: from_component_id
+          type: VARCHAR
+        - name: to_component_id
+          type: VARCHAR
+        - name: created_at
+          type: TIMESTAMP
     - name: users
       fields:
         - name: id
