@@ -48,6 +48,47 @@ describe('ConstellationWorkspace', () => {
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
   });
 
+  it('lights the blast radius when a lane label is selected, and clears it on Escape', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(
+      <ConstellationWorkspace
+        productId="prod-aurora"
+        timeline={seedTimeline()}
+        onSelectProduct={() => {}}
+      />,
+    );
+
+    const apiLabel = screen.getByTestId('lane-label-comp-api');
+    expect(apiLabel).toHaveAttribute('aria-pressed', 'false');
+
+    await user.click(apiLabel);
+    expect(apiLabel).toHaveAttribute('aria-pressed', 'true');
+
+    // The seeded graph puts ui and cli one hop from api, helm two.
+    await waitFor(() =>
+      expect(screen.getByTestId('station-comp-ui-v4')).toHaveAttribute(
+        'data-impact-level',
+        'minor',
+      ),
+    );
+    expect(screen.getByTestId('station-comp-helm-v2')).toHaveAttribute(
+      'data-impact-level',
+      'patch',
+    );
+    expect(screen.getByTestId('station-comp-api-v4')).toHaveAttribute(
+      'data-impact-state',
+      'source',
+    );
+    // One badge per impacted lane — never one per version node.
+    expect(screen.getAllByTestId(/^station-badge-/)).toHaveLength(3);
+
+    await user.keyboard('{Escape}');
+    await waitFor(() =>
+      expect(screen.getByTestId('station-comp-ui-v4')).not.toHaveAttribute('data-impact-level'),
+    );
+    expect(apiLabel).toHaveAttribute('aria-pressed', 'false');
+  });
+
   it('scrubs the meridian with the keyboard, updating the tick readout', async () => {
     const user = userEvent.setup();
     renderWithProviders(

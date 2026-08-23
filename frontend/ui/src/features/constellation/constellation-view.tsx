@@ -1,7 +1,8 @@
 import { useCallback, useRef, type KeyboardEvent, type PointerEvent, type ReactNode } from 'react';
 
+import { useReducedMotion } from '@/features/live';
 import { hueForIndex } from '@/lib';
-import type { Dependency, Timeline } from '@/types';
+import type { ChangeLevel, Dependency, Timeline } from '@/types';
 
 import { DependencyEdges } from './dependency-edges';
 import {
@@ -17,10 +18,16 @@ import {
 import { Meridian } from './meridian';
 import { deriveManifest } from './projection';
 import { Stream } from './stream';
+import type { ImpactState } from './station';
 import styles from './constellation-view.module.css';
 
 const EMPTY_IDS: ReadonlySet<string> = new Set<string>();
 const EMPTY_DEPENDENCIES: readonly Dependency[] = [];
+const EMPTY_LEVELS: ReadonlyMap<string, ChangeLevel> = new Map<string, ChangeLevel>();
+const EMPTY_CHANGE_LEVELS: ReadonlyMap<string, ChangeLevel | null> = new Map<
+  string,
+  ChangeLevel | null
+>();
 
 /** Presentational SVG for the Constellation: streams, stations, meridian, connectors. */
 export interface ConstellationViewProps {
@@ -32,6 +39,14 @@ export interface ConstellationViewProps {
   readonly rolledBackVersionIds?: ReadonlySet<string>;
   /** P9 dependency edges from `GET /products/{id}/graph` — decorative, drawn under the streams. */
   readonly dependencies?: readonly Dependency[];
+  /** P9 impact source: the component whose blast radius is lit, or `null`. */
+  readonly selectedComponentId?: string | null;
+  /** P9 blast radius from `GET /products/{id}/impact`, keyed by COMPONENT id. */
+  readonly impactedByComponent?: ReadonlyMap<string, ChangeLevel>;
+  /** P9 release-frozen change levels keyed by VERSION id (a version, not a component, changes). */
+  readonly changeLevelByVersion?: ReadonlyMap<string, ChangeLevel | null>;
+  /** Toggle the impact selection; `null` clears it. */
+  readonly onSelectComponent?: (componentId: string | null) => void;
 }
 
 export function ConstellationView(props: ConstellationViewProps): ReactNode {
@@ -43,9 +58,14 @@ export function ConstellationView(props: ConstellationViewProps): ReactNode {
     freshVersionIds = EMPTY_IDS,
     rolledBackVersionIds = EMPTY_IDS,
     dependencies = EMPTY_DEPENDENCIES,
+    selectedComponentId = null,
+    impactedByComponent = EMPTY_LEVELS,
+    changeLevelByVersion = EMPTY_CHANGE_LEVELS,
+    onSelectComponent,
   } = props;
 
   const { maxTick } = axis;
+  const reducedMotion = useReducedMotion();
   const svgRef = useRef<SVGSVGElement>(null);
   const draggingRef = useRef<boolean>(false);
 
@@ -56,6 +76,32 @@ export function ConstellationView(props: ConstellationViewProps): ReactNode {
   const manifest = deriveManifest(timeline, axis, tick);
   const pinnedByComponent = new Map<string, string | null>(
     manifest.map((entry) => [entry.component.id, entry.version?.id ?? null]),
+  );
+
+  const toggleSelection = useCallback(
+    (componentId: string): void => {
+      onSelectComponent?.(componentId === selectedComponentId ? null : componentId);
+    },
+    [onSelectComponent, selectedComponentId],
+  );
+
+  const handleLabelKeyDown = useCallback(
+    (event: KeyboardEvent<SVGTextElement>, componentId: string): void => {
+      if (event.key !== 'Enter' && event.key !== ' ') return;
+      event.preventDefault();
+      event.stopPropagation();
+      toggleSelection(componentId);
+    },
+    [toggleSelection],
+  );
+
+  const handleStageKeyDown = useCallback(
+    (event: KeyboardEvent<SVGSVGElement>): void => {
+      if (event.key !== 'Escape') return;
+      event.preventDefault();
+      onSelectComponent?.(null);
+    },
+    [onSelectComponent],
   );
 
   const handleKeyDown = useCallback(
@@ -127,6 +173,7 @@ export function ConstellationView(props: ConstellationViewProps): ReactNode {
       onPointerDown={handlePointerDown}
       onPointerMove={handlePointerMove}
       onPointerUp={handlePointerUp}
+      onKeyDown={handleStageKeyDown}
     >
       {timeline.components.map((component, index) => {
         const y = yOf(index, laneCount);
@@ -148,6 +195,14 @@ export function ConstellationView(props: ConstellationViewProps): ReactNode {
               lengthAdjust="spacing"
               className={styles.laneLabel}
               style={{ fill: hue }}
+              role="button"
+              tabIndex={0}
+              aria-pressed={component.id === selectedComponentId}
+              data-testid={`lane-label-${component.id}`}
+              onClick={() => toggleSelection(component.id)}
+              onKeyDown={(event) => handleLabelKeyDown(event, component.id)}
+              // The label can fall inside the meridian's 28px grab zone — never start a scrub.
+              onPointerDown={(event) => event.stopPropagation()}
             >
               {component.name}
             </text>
@@ -164,23 +219,44 @@ export function ConstellationView(props: ConstellationViewProps): ReactNode {
         now
       </text>
 
-      <DependencyEdges dependencies={dependencies} components={timeline.components} />
+      <DependencyEdges
+        dependencies={dependencies}
+        components={timeline.components}
+        selectedComponentId={selectedComponentId}
+        impactedByComponent={impactedByComponent}
+      />
 
-      {timeline.components.map((component, index) => (
-        <Stream
-          key={component.id}
-          component={component}
-          laneIndex={index}
-          laneCount={laneCount}
-          axis={axis}
-          tick={tick}
-          hue={hueForIndex(index)}
-          pinnedVersionId={pinnedByComponent.get(component.id) ?? null}
-          meridianX={meridianX}
-          freshVersionIds={freshVersionIds}
-          rolledBackVersionIds={rolledBackVersionIds}
-        />
-      ))}
+      {timeline.components.map((component, index) => {
+        const pinnedVersionId = pinnedByComponent.get(component.id) ?? null;
+        const impactLevel = impactedByComponent.get(component.id) ?? null;
+        const selected = component.id === selectedComponentId;
+        let impactState: ImpactState | undefined;
+        if (selectedComponentId !== null) {
+          impactState = selected ? 'source' : impactLevel !== null ? 'impacted' : 'dimmed';
+        }
+
+        return (
+          <Stream
+            key={component.id}
+            component={component}
+            laneIndex={index}
+            laneCount={laneCount}
+            axis={axis}
+            tick={tick}
+            hue={hueForIndex(index)}
+            pinnedVersionId={pinnedVersionId}
+            meridianX={meridianX}
+            freshVersionIds={freshVersionIds}
+            rolledBackVersionIds={rolledBackVersionIds}
+            impactState={impactState}
+            impactLevel={impactLevel}
+            changeLevel={
+              pinnedVersionId ? (changeLevelByVersion.get(pinnedVersionId) ?? null) : null
+            }
+            animated={!reducedMotion}
+          />
+        );
+      })}
 
       <Meridian x={meridianX} position={position} maxTick={maxTick} onKeyDown={handleKeyDown} />
     </svg>
