@@ -21,12 +21,15 @@ from app.models.requests.request_model import RequestModel
 from app.models.responses.component_response_model import ComponentResponseModel
 from app.models.responses.dependency_response_model import DependencyResponseModel
 from app.models.responses.graph_response_model import GraphResponseModel
+from app.models.responses.impact_response_model import ImpactResponseModel
 from app.models.responses.product_response_model import ProductResponseModel
 from app.queries.component_dependencies.add_dependency_query import AddDependencyQuery
 from app.queries.component_dependencies.create_dependency_request import (
     CreateDependencyRequest,
 )
 from app.queries.component_dependencies.graph_query import GraphQuery
+from app.queries.component_dependencies.impact_query import ImpactQuery
+from app.queries.component_dependencies.impact_request import ImpactRequest
 from app.queries.component_dependencies.remove_dependency_query import (
     RemoveDependencyQuery,
 )
@@ -162,6 +165,33 @@ async def get_product_graph(
     request = ProductIdRequest(product_id=product_id)
     await GetProductByIdQuery().execute(data=request, connection=conn)
     return await GraphQuery().execute(data=request, connection=conn)
+
+
+@router.get(
+    "/{product_id}/impact",
+    response_model=ImpactResponseModel,
+)
+async def get_product_impact(
+    product_id: str,
+    conn: DbConnection,
+    component: Annotated[str, QueryParam(alias="component")],
+) -> ImpactResponseModel:
+    """Project a hypothetical major change to ``component`` across its dependents.
+
+    Args:
+        product_id: The parent product's ULID string.
+        conn: The application-managed DuckDB connection.
+        component: The component to hypothetically change (``component`` query
+            parameter).
+
+    Returns:
+        The impacted dependents with their projected change levels.
+
+    Raises:
+        NotFoundError: When the product or component does not exist.
+    """
+    request = ImpactRequest(product_id=product_id, component_id=component)
+    return await ImpactQuery().execute(data=request, connection=conn)
 
 
 @router.post(
