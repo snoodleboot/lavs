@@ -23,6 +23,8 @@
   --good: #7cffb0;
   --danger: #ff6b81;
   --warn: #ffd166;
+  /* P9 change/bump levels: major -> --danger, minor -> --warn, patch -> --patch */
+  --patch: #9fb0cc;
 
   /* component hues (also enumerated in src/lib/palette.ts) */
   --hue-service: #5ad1ff;

@@ -8,6 +8,7 @@ import {
   buildTimeAxis,
   deriveManifest,
   derivedProductVersion,
+  useGraph,
   useScrub,
 } from '@/features/constellation';
 import { useProductEvents } from '@/features/live';
@@ -50,6 +51,7 @@ export function ConstellationWorkspace({
   );
   const pinnedCount = manifest.filter((entry) => entry.version !== null).length;
 
+  const graphQuery = useGraph(productId);
   const releasesQuery = useReleases(productId);
   const base = releasesQuery.data?.[0]?.product_version ?? DEFAULT_PRODUCT_BASE;
   const productVersion = derivedProductVersion(base, pinnedCount > 0);
@@ -118,6 +120,7 @@ export function ConstellationWorkspace({
               onPositionChange={setPosition}
               freshVersionIds={live.freshVersionIds}
               rolledBackVersionIds={live.rolledBackVersionIds}
+              dependencies={graphQuery.data?.edges ?? []}
             />
             <p className={styles.hint}>
               Time flows left → right · the right edge is <b>now</b>. The bright line is a release

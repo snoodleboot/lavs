@@ -16,9 +16,23 @@ function makeRelease(): Release {
     product_version: '5.1.0',
     label: 'Aurora 5.1',
     created_at: '2026-05-13T12:00:00.000Z',
+    bump_level: 'minor',
+    bump_rationale: null,
     components: [
-      { component_id: 'comp-api', name: 'lavs-api', version_id: 'comp-api-v4', version: '2.4.0' },
-      { component_id: 'comp-cli', name: 'lavs-cli', version_id: 'comp-cli-v1', version: '1.1.0' },
+      {
+        component_id: 'comp-api',
+        name: 'lavs-api',
+        version_id: 'comp-api-v4',
+        version: '2.4.0',
+        change_level: 'minor',
+      },
+      {
+        component_id: 'comp-cli',
+        name: 'lavs-cli',
+        version_id: 'comp-cli-v1',
+        version: '1.1.0',
+        change_level: null,
+      },
     ],
   };
 }

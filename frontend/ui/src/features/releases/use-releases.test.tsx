@@ -22,6 +22,8 @@ const RELEASE: Release = {
   product_version: '5.1.0',
   label: 'Aurora 5.1',
   created_at: '2026-05-13T12:00:00.000Z',
+  bump_level: 'minor',
+  bump_rationale: null,
   components: [],
 };
 

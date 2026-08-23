@@ -1,15 +1,26 @@
 import { useCallback, useRef, type KeyboardEvent, type PointerEvent, type ReactNode } from 'react';
 
 import { hueForIndex } from '@/lib';
-import type { Timeline } from '@/types';
+import type { Dependency, Timeline } from '@/types';
 
-import { LANE_TOP, VIEWBOX, tOfX, xOf, yOf, type TimeAxis } from './geometry';
+import { DependencyEdges } from './dependency-edges';
+import {
+  LABEL_ANCHOR_X,
+  LANE_TOP,
+  VIEWBOX,
+  labelWidth,
+  tOfX,
+  xOf,
+  yOf,
+  type TimeAxis,
+} from './geometry';
 import { Meridian } from './meridian';
 import { deriveManifest } from './projection';
 import { Stream } from './stream';
 import styles from './constellation-view.module.css';
 
 const EMPTY_IDS: ReadonlySet<string> = new Set<string>();
+const EMPTY_DEPENDENCIES: readonly Dependency[] = [];
 
 /** Presentational SVG for the Constellation: streams, stations, meridian, connectors. */
 export interface ConstellationViewProps {
@@ -19,6 +30,8 @@ export interface ConstellationViewProps {
   readonly onPositionChange: (tick: number) => void;
   readonly freshVersionIds?: ReadonlySet<string>;
   readonly rolledBackVersionIds?: ReadonlySet<string>;
+  /** P9 dependency edges from `GET /products/{id}/graph` — decorative, drawn under the streams. */
+  readonly dependencies?: readonly Dependency[];
 }
 
 export function ConstellationView(props: ConstellationViewProps): ReactNode {
@@ -29,6 +42,7 @@ export function ConstellationView(props: ConstellationViewProps): ReactNode {
     onPositionChange,
     freshVersionIds = EMPTY_IDS,
     rolledBackVersionIds = EMPTY_IDS,
+    dependencies = EMPTY_DEPENDENCIES,
   } = props;
 
   const { maxTick } = axis;
@@ -127,9 +141,11 @@ export function ConstellationView(props: ConstellationViewProps): ReactNode {
               className={styles.laneBase}
             />
             <text
-              x={VIEWBOX.padLeft - 16}
+              x={LABEL_ANCHOR_X}
               y={y + 4}
               textAnchor="end"
+              textLength={labelWidth(component.name)}
+              lengthAdjust="spacing"
               className={styles.laneLabel}
               style={{ fill: hue }}
             >
@@ -147,6 +163,8 @@ export function ConstellationView(props: ConstellationViewProps): ReactNode {
       >
         now
       </text>
+
+      <DependencyEdges dependencies={dependencies} components={timeline.components} />
 
       {timeline.components.map((component, index) => (
         <Stream

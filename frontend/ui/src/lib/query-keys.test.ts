@@ -13,5 +13,7 @@ describe('queryKeys', () => {
     expect(queryKeys.release('r')).toEqual(['releases', 'r']);
     expect(queryKeys.components('p')).toEqual(['products', 'p', 'components']);
     expect(queryKeys.versions('c')).toEqual(['components', 'c', 'versions']);
+    expect(queryKeys.graph('p')).toEqual(['products', 'p', 'graph']);
+    expect(queryKeys.impact('p', 'c')).toEqual(['products', 'p', 'impact', 'c']);
   });
 });
