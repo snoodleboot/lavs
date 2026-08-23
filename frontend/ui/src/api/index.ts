@@ -13,6 +13,8 @@ export type { Credentials } from './auth';
 
 export { subscribeToProductEvents } from './events';
 export type {
+  DependencyAddedEvent,
+  DependencyRemovedEvent,
   ProductEventHandlers,
   ReleaseCutEvent,
   SubscribeOptions,

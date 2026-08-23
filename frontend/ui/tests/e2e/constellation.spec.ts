@@ -50,6 +50,19 @@ test('login → scrub the meridian → cut a release', async ({ page }) => {
 
   // The new release (server-assigned product version 5.1.0) appears in the ledger.
   await expect(page.getByText(/5\.1\.0/).first()).toBeVisible();
+
+  // LAV-63: the cut release's derived bump reads out, with a shaped (non-JSON) rationale.
+  await expect(page.getByTestId('bump-level')).toHaveText('▲ minor');
+  await expect(page.getByTestId('bump-rationale')).not.toHaveText(/[{}]/);
+  await expect(page.getByTestId('station-comp-api-v4')).toHaveAttribute(
+    'data-change-level',
+    'minor',
+  );
+
+  // Scrubbing away from "now" hides the bump so the card never contradicts itself.
+  await meridian.focus();
+  await page.keyboard.press('ArrowLeft');
+  await expect(page.getByTestId('bump-level')).toHaveCount(0);
 });
 
 // LAV-62: the impact highlight is reachable and legible with the keyboard alone.
@@ -78,4 +91,21 @@ test('keyboard-select a component and light its blast radius', async ({ page }) 
   await page.keyboard.press('Escape');
   await expect(label).toHaveAttribute('aria-pressed', 'false');
   await expect(pinnedUi).not.toHaveAttribute('data-impact-level', /.*/);
+});
+
+// The impact glow runs through the useReducedMotion JS seam, so the honoured preference is
+// observable in the rendered DOM rather than only in a media query.
+test('reduced motion collapses the impact glow', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await signIn(page);
+
+  await page.getByTestId('lane-label-comp-api').focus();
+  await page.keyboard.press('Enter');
+  await expect(page.getByTestId('station-comp-ui-v4')).toHaveAttribute(
+    'data-impact-level',
+    'minor',
+  );
+
+  const className = await page.getByTestId('station-comp-ui-v4').getAttribute('class');
+  expect(className).not.toContain('animated');
 });

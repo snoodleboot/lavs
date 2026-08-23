@@ -74,8 +74,22 @@ export function ConstellationWorkspace({
       ),
     [selectedComponentId, impactQuery.data],
   );
-  const base = releasesQuery.data?.[0]?.product_version ?? DEFAULT_PRODUCT_BASE;
+  const latestRelease = releasesQuery.data?.[0];
+  const base = latestRelease?.product_version ?? DEFAULT_PRODUCT_BASE;
   const productVersion = derivedProductVersion(base, pinnedCount > 0);
+
+  // `change_level` is VERSION-scoped, not component-scoped: keying by component would paint
+  // the latest release's level onto whichever historical version the meridian is parked on.
+  const changeLevelByVersion = useMemo<ReadonlyMap<string, ChangeLevel | null>>(
+    () =>
+      new Map(
+        latestRelease?.components.map((component) => [
+          component.version_id,
+          component.change_level,
+        ]) ?? [],
+      ),
+    [latestRelease],
+  );
 
   // Live SSE overlay: pulsing/dimming sets fed into the SVG; ledger reconciles on release.cut.
   const live = useProductEvents(productId);
@@ -142,6 +156,7 @@ export function ConstellationWorkspace({
               freshVersionIds={live.freshVersionIds}
               rolledBackVersionIds={live.rolledBackVersionIds}
               dependencies={graphQuery.data?.edges ?? []}
+              changeLevelByVersion={changeLevelByVersion}
               selectedComponentId={selectedComponentId}
               impactedByComponent={impactedByComponent}
               onSelectComponent={setSelectedComponentId}
@@ -153,7 +168,13 @@ export function ConstellationWorkspace({
           </div>
 
           <aside className={styles.hud} aria-label="Release controls">
-            <ProductVersionReadout productVersion={productVersion} tick={position} />
+            <ProductVersionReadout
+              productVersion={productVersion}
+              tick={position}
+              bumpLevel={latestRelease?.bump_level}
+              bumpRationale={latestRelease?.bump_rationale}
+              atNow={position === axis.maxTick}
+            />
             <div className={styles.manifestCard}>
               <h3 className={styles.cardHeading}>Pinned manifest</h3>
               <ul className={styles.manifest}>
