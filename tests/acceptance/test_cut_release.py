@@ -69,6 +69,23 @@ def _create_version(client: TestClient, component_id: str, version: str) -> dict
     return response.json()
 
 
+def _add_version(client: TestClient, product_id: str, component_name: str, version: str) -> None:
+    """Append a new active version to a named component of ``product_id``.
+
+    Args:
+        client: The FastAPI test client.
+        product_id: The parent product id.
+        component_name: The component to append the version to.
+        version: The new semantic version string.
+    """
+    components = client.get(f"/products/{product_id}/components").json()
+    component = next(entry for entry in components if entry["name"] == component_name)
+    response = client.post(
+        "/versions", json={"component_id": str(component["id"]), "version": version}
+    )
+    assert response.status_code in _CREATED_OK, response.text
+
+
 def _version_string(version: dict[str, object]) -> str:
     """Render a version response as ``major.minor.patch`` with optional prerelease.
 
@@ -196,16 +213,38 @@ class TestCutRelease:
             assert entry["name"] == want["name"]
 
     def test_second_cut_bumps_minor_to_0_2_0(self, client: TestClient) -> None:
-        """A second cut bumps the minor component from ``0.1.0`` to ``0.2.0``."""
+        """A minor component change between cuts derives a minor bump ``0.1.0`` -> ``0.2.0``."""
         # Arrange
         seed = _seed_product_with_two_components(client)
-        first = client.post(f"/products/{seed['product_id']}/releases", json={})
+        product_id = str(seed["product_id"])
+        first = client.post(f"/products/{product_id}/releases", json={})
         assert first.status_code == 201, first.text
         assert first.json()["product_version"] == "0.1.0"
+        # Under the default policy a minor component change drives the derived bump.
+        _add_version(client, product_id, "lavs-api", "2.5.0")
 
         # Act
-        second = client.post(f"/products/{seed['product_id']}/releases", json={})
+        second = client.post(f"/products/{product_id}/releases", json={})
 
         # Assert
         assert second.status_code == 201, second.text
         assert second.json()["product_version"] == "0.2.0"
+        assert second.json()["bump_level"] == "minor"
+
+    def test_recut_without_change_keeps_version(self, client: TestClient) -> None:
+        """A re-cut with no component change derives NONE and repeats the version (G-P9d)."""
+        # Arrange
+        seed = _seed_product_with_two_components(client)
+        product_id = str(seed["product_id"])
+        first = client.post(f"/products/{product_id}/releases", json={})
+        assert first.status_code == 201, first.text
+        assert first.json()["product_version"] == "0.1.0"
+
+        # Act
+        second = client.post(f"/products/{product_id}/releases", json={})
+
+        # Assert -- a distinct release row, same version, NONE bump.
+        assert second.status_code == 201, second.text
+        assert second.json()["id"] != first.json()["id"]
+        assert second.json()["product_version"] == "0.1.0"
+        assert second.json()["bump_level"] == "none"

@@ -39,12 +39,15 @@ CREATE TABLE releases (
     label VARCHAR,
     notes VARCHAR,
     idempotency_key VARCHAR,
+    bump_level VARCHAR,
+    bump_rationale VARCHAR,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 CREATE TABLE release_components (
     release_id VARCHAR NOT NULL REFERENCES releases(id),
     component_id VARCHAR NOT NULL,
     version_id VARCHAR NOT NULL,
+    change_level VARCHAR,
     PRIMARY KEY (release_id, component_id)
 );
 """
