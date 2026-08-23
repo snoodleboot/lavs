@@ -20,6 +20,8 @@ class ReleaseResponseModel(ResponseModel):
     label: str | None
     notes: str | None
     created_at: str
+    bump_level: str | None = None
+    bump_rationale: str | None = None
     components: list[ReleaseComponentResponseModel]
 
     model_config = {

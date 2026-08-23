@@ -39,6 +39,24 @@ def _seed_released_product(client: TestClient) -> str:
     return product_id
 
 
+def _add_version(client: TestClient, product_id: str, version: str) -> None:
+    """Append a new active version to the product's component.
+
+    Under the default bump policy this real change is what drives a derived bump
+    on the next cut.
+
+    Args:
+        client: The FastAPI test client.
+        product_id: The parent product id.
+        version: The new semantic version string.
+    """
+    components = client.get(f"/products/{product_id}/components").json()
+    response = client.post(
+        "/versions", json={"component_id": str(components[0]["id"]), "version": version}
+    )
+    assert response.status_code in _CREATED_OK, response.text
+
+
 class TestReleaseManifestRead:
     """P2: the ledger lists releases newest-first and a single release reads back identically."""
 
@@ -47,6 +65,7 @@ class TestReleaseManifestRead:
         # Arrange
         product_id = _seed_released_product(client)
         first = client.post(f"/products/{product_id}/releases", json={"label": "first"})
+        _add_version(client, product_id, "2.5.0")
         second = client.post(f"/products/{product_id}/releases", json={"label": "second"})
         assert first.status_code == 201 and second.status_code == 201, (first.text, second.text)
 

@@ -9,7 +9,13 @@ def test_event_type_values_match_contract() -> None:
     values = {member.value for member in EventType}
 
     # Assert
-    assert values == {"version.created", "version.rolled_back", "release.cut"}
+    assert values == {
+        "version.created",
+        "version.rolled_back",
+        "release.cut",
+        "dependency.added",
+        "dependency.removed",
+    }
 
 
 def test_event_type_is_string() -> None:

@@ -35,7 +35,16 @@ class ReleaseResponseMapper:
         Returns:
             The populated :class:`ReleaseResponseModel`.
         """
-        release_id, product_id, product_version, label, notes, created_at = row
+        (
+            release_id,
+            product_id,
+            product_version,
+            label,
+            notes,
+            created_at,
+            bump_level,
+            bump_rationale,
+        ) = row
         rendered_created_at = (
             created_at.isoformat() if isinstance(created_at, datetime) else str(created_at)
         )
@@ -46,5 +55,7 @@ class ReleaseResponseMapper:
             label=None if label is None else str(label),
             notes=None if notes is None else str(notes),
             created_at=rendered_created_at,
+            bump_level=None if bump_level is None else str(bump_level),
+            bump_rationale=None if bump_rationale is None else str(bump_rationale),
             components=components,
         )

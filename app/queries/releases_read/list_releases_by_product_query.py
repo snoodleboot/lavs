@@ -13,7 +13,8 @@ _PRODUCT_EXISTS = "SELECT 1 FROM products WHERE id = ?"
 # Newest first: ``created_at`` descending, with ``id`` descending as the
 # deterministic tie-break for releases sharing a timestamp.
 _RELEASES_SELECT = (
-    "SELECT id, product_id, product_version, label, notes, created_at "
+    "SELECT id, product_id, product_version, label, notes, created_at, "
+    "bump_level, bump_rationale "
     "FROM releases WHERE product_id = ? "
     "ORDER BY created_at DESC, id DESC"
 )

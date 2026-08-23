@@ -33,6 +33,7 @@ CREATE TABLE products (
     name VARCHAR(255) NOT NULL,
     description NVARCHAR(MAX),
     base_version VARCHAR(255) NOT NULL DEFAULT '0.0.0',
+    bump_policy VARCHAR(255) NOT NULL DEFAULT 'legacy',
     created_at DATETIME2 DEFAULT SYSUTCDATETIME()
 );
 
@@ -66,6 +67,8 @@ CREATE TABLE releases (
     label VARCHAR(255),
     notes NVARCHAR(MAX),
     idempotency_key VARCHAR(255),
+    bump_level VARCHAR(255),
+    bump_rationale NVARCHAR(MAX),
     created_at DATETIME2 DEFAULT SYSUTCDATETIME(),
     FOREIGN KEY (product_id) REFERENCES products(id)
 );
@@ -75,8 +78,30 @@ CREATE TABLE release_components (
     release_id VARCHAR(255) NOT NULL,
     component_id VARCHAR(255) NOT NULL,
     version_id VARCHAR(255) NOT NULL,
+    change_level VARCHAR(255),
     PRIMARY KEY (release_id, component_id),
     FOREIGN KEY (release_id) REFERENCES releases(id)
+);
+
+-- P9: product dependency graph — intra-product edges "from depends on to".
+-- Guarded with IF OBJECT_ID (T-SQL has no CREATE TABLE IF NOT EXISTS); the
+-- guard and CREATE carry no interior ';' so the splitter keeps them one batch.
+-- Self-edge, cross-product and cycle rejection are enforced in the application
+-- layer (portable, no recursive CTE). As with base_version, the P9 columns on
+-- the pre-existing products/releases/release_components tables are present here
+-- via CREATE for a fresh database; the idempotent add-column upgrade for a
+-- database predating P9 is handled out-of-band (F-4).
+IF OBJECT_ID(N'component_dependencies', N'U') IS NULL
+CREATE TABLE component_dependencies (
+    id VARCHAR(255) NOT NULL PRIMARY KEY,
+    product_id VARCHAR(255) NOT NULL,
+    from_component_id VARCHAR(255) NOT NULL,
+    to_component_id VARCHAR(255) NOT NULL,
+    created_at DATETIME2 DEFAULT SYSUTCDATETIME(),
+    CONSTRAINT uq_component_dependencies UNIQUE (product_id, from_component_id, to_component_id),
+    CONSTRAINT fk_cd_product FOREIGN KEY (product_id) REFERENCES products(id),
+    CONSTRAINT fk_cd_from FOREIGN KEY (from_component_id) REFERENCES components(id),
+    CONSTRAINT fk_cd_to FOREIGN KEY (to_component_id) REFERENCES components(id)
 );
 
 -- Auth (P4): password/session users and their opaque, hashed tokens.

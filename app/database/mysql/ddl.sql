@@ -31,6 +31,7 @@ CREATE TABLE IF NOT EXISTS products (
     name VARCHAR(255) NOT NULL,
     description TEXT,
     base_version VARCHAR(255) NOT NULL DEFAULT '0.0.0',
+    bump_policy VARCHAR(255) NOT NULL DEFAULT 'legacy',
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
@@ -61,6 +62,8 @@ CREATE TABLE IF NOT EXISTS releases (
     label VARCHAR(255),
     notes TEXT,
     idempotency_key VARCHAR(255),
+    bump_level VARCHAR(255),
+    bump_rationale TEXT,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (product_id) REFERENCES products(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
@@ -69,8 +72,31 @@ CREATE TABLE IF NOT EXISTS release_components (
     release_id VARCHAR(255) NOT NULL,
     component_id VARCHAR(255) NOT NULL,
     version_id VARCHAR(255) NOT NULL,
+    change_level VARCHAR(255),
     PRIMARY KEY (release_id, component_id),
     FOREIGN KEY (release_id) REFERENCES releases(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- P9: product dependency graph — intra-product edges "from depends on to".
+-- Table-level FKs (InnoDB ignores inline REFERENCES). The three-column unique
+-- key is 3*255*4 = 3060 bytes utf8mb4, under InnoDB's 3072-byte index limit.
+-- Self-edge, cross-product and cycle rejection are enforced in the application
+-- layer (portable, no recursive CTE). As with base_version above, the P9
+-- columns on the pre-existing products/releases/release_components tables are
+-- present here via CREATE for a fresh database; the idempotent add-column
+-- upgrade for a database predating P9 is handled out-of-band (F-4), MySQL
+-- having no in-DDL `ADD COLUMN IF NOT EXISTS`.
+CREATE TABLE IF NOT EXISTS component_dependencies (
+    id VARCHAR(255) NOT NULL,
+    product_id VARCHAR(255) NOT NULL,
+    from_component_id VARCHAR(255) NOT NULL,
+    to_component_id VARCHAR(255) NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    UNIQUE (product_id, from_component_id, to_component_id),
+    FOREIGN KEY (product_id) REFERENCES products(id),
+    FOREIGN KEY (from_component_id) REFERENCES components(id),
+    FOREIGN KEY (to_component_id) REFERENCES components(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- Auth (P4): password/session users and their opaque, hashed tokens.

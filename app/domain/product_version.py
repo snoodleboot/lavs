@@ -7,6 +7,8 @@ released, its configured ``base_version``. These helpers are pure so the cut
 lane can unit-test the arithmetic without a database.
 """
 
+from app.models.enums.bump_level import BumpLevel
+
 _SEPARATOR = "."
 _PRERELEASE_SEPARATOR = "-"
 _CORE_PART_COUNT = 3
@@ -57,6 +59,70 @@ def bump_minor(version: str) -> str:
     """
     major, minor, _patch = _parse_core(version)
     return f"{major}{_SEPARATOR}{minor + 1}{_SEPARATOR}0"
+
+
+def bump_major(version: str) -> str:
+    """Return ``version`` with its major component incremented and the rest reset.
+
+    ``X.Y.Z`` (with any prerelease suffix) becomes ``(X+1).0.0``.
+
+    Args:
+        version: The current version string.
+
+    Returns:
+        The major-bumped version string.
+
+    Raises:
+        ValueError: When ``version`` is not a valid ``major.minor.patch`` core.
+    """
+    major, _minor, _patch = _parse_core(version)
+    return f"{major + 1}{_SEPARATOR}0{_SEPARATOR}0"
+
+
+def bump_patch(version: str) -> str:
+    """Return ``version`` with its patch component incremented.
+
+    ``X.Y.Z`` (with any prerelease suffix) becomes ``X.Y.(Z+1)``; the prerelease
+    is dropped, matching the minor/major bumps.
+
+    Args:
+        version: The current version string.
+
+    Returns:
+        The patch-bumped version string.
+
+    Raises:
+        ValueError: When ``version`` is not a valid ``major.minor.patch`` core.
+    """
+    major, minor, patch = _parse_core(version)
+    return f"{major}{_SEPARATOR}{minor}{_SEPARATOR}{patch + 1}"
+
+
+def apply_bump(current: str, level: BumpLevel) -> str:
+    """Apply a derived bump ``level`` to ``current``.
+
+    ``MAJOR``/``MINOR``/``PATCH`` bump the respective component (dropping any
+    prerelease); ``NONE`` leaves the version string unchanged — a zero-change
+    re-cut carries the same product version (G-P9d).
+
+    Args:
+        current: The product's current version (its latest release version, or
+            its configured ``base_version`` when it has never been released).
+        level: The derived product bump.
+
+    Returns:
+        The server-assigned ``product_version`` for the new release.
+
+    Raises:
+        ValueError: When ``current`` is not a valid ``major.minor.patch`` core.
+    """
+    if level is BumpLevel.MAJOR:
+        return bump_major(current)
+    if level is BumpLevel.MINOR:
+        return bump_minor(current)
+    if level is BumpLevel.PATCH:
+        return bump_patch(current)
+    return current
 
 
 def next_product_version(latest_release_version: str | None, base_version: str) -> str:

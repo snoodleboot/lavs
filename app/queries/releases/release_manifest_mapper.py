@@ -50,6 +50,7 @@ def to_release_components(
     components: list[ReleaseComponentResponseModel] = []
     for row in rows:
         fields = dict(zip(columns, row, strict=False))
+        change_level = fields.get("change_level")
         components.append(
             ReleaseComponentResponseModel(
                 component_id=fields["component_id"],
@@ -58,6 +59,7 @@ def to_release_components(
                 version=format_version(
                     fields["major"], fields["minor"], fields["patch"], fields["prerelease"]
                 ),
+                change_level=None if change_level is None else str(change_level),
             )
         )
     return components
@@ -87,6 +89,8 @@ def to_release_response(
     created_at_text = (
         created_at.isoformat() if isinstance(created_at, datetime) else str(created_at)
     )
+    bump_level = fields.get("bump_level")
+    bump_rationale = fields.get("bump_rationale")
     return ReleaseResponseModel(
         id=fields["id"],
         product_id=fields["product_id"],
@@ -94,5 +98,7 @@ def to_release_response(
         label=fields["label"],
         notes=fields["notes"],
         created_at=created_at_text,
+        bump_level=None if bump_level is None else str(bump_level),
+        bump_rationale=None if bump_rationale is None else str(bump_rationale),
         components=components,
     )

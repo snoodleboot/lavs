@@ -22,6 +22,14 @@ Today we are at ~30% of that vision: a clean FastAPI skeleton doing CRUD over a 
 that doesn't work. The integrating idea — products composed of components, and releases that
 pin component versions — does not exist yet. This roadmap closes that gap in five phases.
 
+**v2 north star — product dependency graphs.** With v1's release/version/manifest spine green,
+v2 makes a product's version a *derived* fact of what actually changed inside it. The chosen
+sequencing is **internal DAG first**: **P9** lands an intra-product component dependency graph and
+a cut-time derivation that classifies each component's real change and takes the graph-wide max
+(replacing the blind minor-bump); **P10** lifts the same edge primitive to cross-product
+composition. Existing products are unaffected until an operator opts a product onto the graph
+policy (per-product `bump_policy`, default `legacy`).
+
 ## 2. Guiding principles
 
 - **DuckDB-local / Postgres-prod parity** — identical API and behavior on both; DuckDB is the
@@ -30,6 +38,8 @@ pin component versions — does not exist yet. This roadmap closes that gap in f
 - **Parameterized SQL only** — no string-interpolated queries, ever.
 - **API-first** — every capability is a documented endpoint before it is a UI feature.
 - **Innovative UI** — the frontend is a first-class, non-vanilla experience (see UI concept).
+- **Derived, explainable versions** — a release records *why* it got the version it did
+  (per-component change + dominating node), not just the number.
 
 ## 3. Phases
 
@@ -42,6 +52,7 @@ pin component versions — does not exist yet. This roadmap closes that gap in f
 | **P4 Auth (OSS)** | Real auth for the OSS v1 | Pluggable providers: password+sessions (signup, email + domain validation) + API key | A user can sign up (verified), log in, and use the UI; headless clients use API keys |
 | **P5 Frontend** | The Constellation UI | TS/React app over the API w/ live SSE updates | Browse products/components/versions/releases; cut a release; streams update live |
 | **P6 EE (Stytch)** *fast-follow* | Enterprise edition | Stytch provider behind the existing auth abstraction | EE build authenticates via Stytch; OSS untouched |
+| **P9 Dependency graphs** *(v2)* | Intra-product DAG + derived versions | `component_dependencies` on all 4 backends; cut-time change derivation replaces the blind minor-bump; per-product `bump_policy` | Non-vacuous 4-backend parity; `default`-policy cut derives major/minor/patch/none, `legacy` byte-identical; `POST/DELETE /dependencies`, `GET /graph`, `GET /impact`; SSE `dependency.added/removed` |
 
 **Realtime (cross-cutting, lands with P2/P5):** an SSE channel (`GET /products/{id}/events`)
 pushes `version.created` / `version.rolled_back` / `release.cut` so the UI updates live. See
@@ -66,6 +77,8 @@ gantt
     Constellation UI + live SSE            :p5, after p4, 16d
     section P6 EE (fast-follow)
     Stytch provider                        :p6, after p5, 8d
+    section P9 Dependency graphs (v2)
+    Intra-product DAG + derived versions   :p9, after p6, 20d
 ```
 
 ## 4. Phase detail
@@ -136,6 +149,52 @@ selected by deploy config (`LAVS_AUTH_MODES`). EE/Stytch is **out of scope here*
 - [ ] UI renders the Stytch widget when `edition=ee` / `stytch` is in `LAVS_AUTH_MODES`.
 
 **Acceptance:** an EE build authenticates via Stytch; the OSS build and all resource routes are unchanged.
+
+### P9 — Dependency Graphs *(v2, intra-product DAG + change propagation)*
+
+Replaces `product_version.next_product_version`'s blind minor-bump with a cut-time,
+per-component-diff bump derived over an intra-product component DAG. A per-product `bump_policy`
+column pins existing products to a `legacy` preset (byte-identical to today) while new products
+adopt the `default` graph policy. In P9 the DAG edges refine per-component `change_level`,
+`bump_rationale`, and the `/impact` what-if — the fixed contraction policy means the product bump
+equals the max own-change; propagation moves the version only in P10.
+
+- [ ] `component_dependencies` edge table (product-scoped unique key, ULID id) across
+      DuckDB/PG/MySQL/MSSQL + `database.yaml`; non-vacuous 4-backend parity (raw-insert duplicate
+      + two-product-scope discriminators).
+- [ ] Python-side cycle/self/cross-product/dup rejection (no recursive CTE); dependency CRUD +
+      `GET /graph` on the products router.
+- [ ] Pure `change_classifier` + `bump_propagation` (topo-sort in Python); `BumpLevel` enum;
+      `bump_major`/`bump_patch`/`apply_bump` in `product_version`.
+- [ ] Per-product `bump_policy` (`legacy`/`default`, DEFAULT `legacy`); `bump_level`/
+      `bump_rationale`/`change_level` columns, threaded through the cut mapper and both read paths
+      (nullable, so pre-P9 rows read back).
+- [ ] `GET /impact` what-if; SSE `dependency.added`/`removed` + `bump_level` on `release.cut`.
+- [ ] *(follow-up)* Constellation edge layer + impact highlight in the frontend.
+
+**Acceptance:** existing empty-edge products on `legacy` produce today's minor bump (no behaviour
+change); new `default` products derive major/minor/patch/none and `product_version` is invariant
+to intra-product edge presence; each release records `bump_level` + rationale + per-component
+`change_level`, surfaced on cut and both read endpoints; cycle/self/cross/dup raise 409, unknown
+product/component 404; 4-backend parity not skipped; no tags, no version bump, pyproject stays
+`1.0.0`. *(Full plan: [P9_MULTIAGENT_EXECUTION_PLAN.md](P9_MULTIAGENT_EXECUTION_PLAN.md).)*
+
+### P10 — Cross-product composition *(outline)*
+
+Lifts the same `component_dependencies` edge primitive to cross-product: a component may be backed
+by another product's release. Because a backing product's `bump_level` is not an active node in
+the dependent's own-set, propagation finally moves the dependent product's version (the P9
+classifier/propagation modules lift unchanged, being pure and level-based).
+
+- [ ] Edge extension for a `to` of *(product_id, release/version)* — sibling backing table or
+      nullable `to_product_id`/`to_release_id` (decided in P10).
+- [ ] Reuse the P9 derivation with a backing product's last-cut `bump_level` as the dependency's
+      effective level.
+- [ ] Cross-product DAG cycle rejection (Python reachability, no recursive CTE).
+- [ ] Cross-product edges in `GET /graph`/`impact`, an SSE variant, Constellation rendering.
+
+**Acceptance:** an all-intra-product graph derives identically to P9; mutual product backing is
+rejected; no recursive CTEs.
 
 ## 5. Cross-cutting
 
