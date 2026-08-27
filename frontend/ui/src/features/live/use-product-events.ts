@@ -3,9 +3,14 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { subscribeToProductEvents } from '@/api';
 import { queryKeys } from '@/lib';
-import type { Release, Timeline } from '@/types';
+import type { GraphResponse, Release, Timeline } from '@/types';
 
-import { applyVersionCreated, applyVersionRolledBack } from './event-cache';
+import {
+  applyDependencyAdded,
+  applyDependencyRemoved,
+  applyVersionCreated,
+  applyVersionRolledBack,
+} from './event-cache';
 import { useReducedMotion } from './use-reduced-motion';
 
 // How long a freshly-created version keeps its transient "pulse" flag before it clears.
@@ -77,6 +82,7 @@ export function useProductEvents(
 
     const timelineKey = queryKeys.timeline(productId);
     const releasesKey = queryKeys.releases(productId);
+    const graphKey = queryKeys.graph(productId);
 
     const dispose = subscribeToProductEvents(
       productId,
@@ -97,6 +103,18 @@ export function useProductEvents(
           );
           setRolledBackVersionIds((prev) => new Set(prev).add(event.version_id));
           void queryClient.invalidateQueries({ queryKey: timelineKey });
+        },
+        onDependencyAdded: (event) => {
+          queryClient.setQueryData<GraphResponse>(graphKey, (prev) =>
+            prev ? applyDependencyAdded(prev, event) : prev,
+          );
+          void queryClient.invalidateQueries({ queryKey: graphKey });
+        },
+        onDependencyRemoved: (event) => {
+          queryClient.setQueryData<GraphResponse>(graphKey, (prev) =>
+            prev ? applyDependencyRemoved(prev, event) : prev,
+          );
+          void queryClient.invalidateQueries({ queryKey: graphKey });
         },
         onReleaseCut: (event) => {
           setLastReleaseId(event.release.id);

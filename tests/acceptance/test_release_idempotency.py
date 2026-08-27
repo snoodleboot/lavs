@@ -39,6 +39,24 @@ def _seed_released_product(client: TestClient) -> str:
     return product_id
 
 
+def _add_version(client: TestClient, product_id: str, version: str) -> None:
+    """Append a new active version to the product's component.
+
+    Under the default bump policy this real component change is what drives a
+    derived bump on the next cut.
+
+    Args:
+        client: The FastAPI test client.
+        product_id: The parent product id.
+        version: The new semantic version string.
+    """
+    components = client.get(f"/products/{product_id}/components").json()
+    response = client.post(
+        "/versions", json={"component_id": str(components[0]["id"]), "version": version}
+    )
+    assert response.status_code in _CREATED_OK, response.text
+
+
 class TestReleaseIdempotency:
     """P2: the Idempotency-Key header collapses a retried cut onto the same release."""
 
@@ -91,6 +109,7 @@ class TestReleaseIdempotency:
             json={},
             headers={"Idempotency-Key": "d7c0ffee-0000-4000-8000-000000000003"},
         )
+        _add_version(client, product_id, "2.5.0")
         second = client.post(
             f"/products/{product_id}/releases",
             json={},
@@ -110,6 +129,7 @@ class TestReleaseIdempotency:
 
         # Act
         first = client.post(f"/products/{product_id}/releases", json={})
+        _add_version(client, product_id, "2.5.0")
         second = client.post(f"/products/{product_id}/releases", json={})
 
         # Assert

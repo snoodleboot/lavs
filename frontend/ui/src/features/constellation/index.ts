@@ -1,4 +1,19 @@
-export { buildTimeAxis, xOf, tOfX, yOf, laneHeight, VIEWBOX, LANE_TOP } from './geometry';
+export {
+  buildTimeAxis,
+  xOf,
+  tOfX,
+  yOf,
+  laneHeight,
+  labelWidth,
+  VIEWBOX,
+  LANE_TOP,
+  LABEL_ANCHOR_X,
+  LABEL_CHAR_WIDTH,
+  LABEL_COLUMN_LEFT,
+  LABEL_MAX_WIDTH,
+  GUTTER_DEPTH,
+  BADGE_DY,
+} from './geometry';
 export type { TimeAxis } from './geometry';
 export {
   pinnedFor,
@@ -11,3 +26,9 @@ export { useScrub } from './use-scrub';
 export type { Scrub } from './use-scrub';
 export { ConstellationView } from './constellation-view';
 export type { ConstellationViewProps } from './constellation-view';
+export { useGraph } from './use-graph';
+export { useImpact } from './use-impact';
+export { Station } from './station';
+export type { ImpactState, StationProps } from './station';
+export { DependencyEdges } from './dependency-edges';
+export type { DependencyEdgesProps } from './dependency-edges';

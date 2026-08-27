@@ -1,4 +1,4 @@
-import { useCallback, useMemo, type ReactNode } from 'react';
+import { useCallback, useMemo, useState, type ReactNode } from 'react';
 
 import { AppShell } from '@/app/app-shell';
 import { useAuth } from '@/features/auth';
@@ -8,6 +8,8 @@ import {
   buildTimeAxis,
   deriveManifest,
   derivedProductVersion,
+  useGraph,
+  useImpact,
   useScrub,
 } from '@/features/constellation';
 import { useProductEvents } from '@/features/live';
@@ -20,7 +22,7 @@ import {
   useReleases,
 } from '@/features/releases';
 import { formatVersion, hueForIndex } from '@/lib';
-import type { Release, Timeline } from '@/types';
+import type { ChangeLevel, Release, Timeline } from '@/types';
 
 import styles from './constellation-workspace.module.css';
 
@@ -50,9 +52,44 @@ export function ConstellationWorkspace({
   );
   const pinnedCount = manifest.filter((entry) => entry.version !== null).length;
 
+  const graphQuery = useGraph(productId);
   const releasesQuery = useReleases(productId);
-  const base = releasesQuery.data?.[0]?.product_version ?? DEFAULT_PRODUCT_BASE;
+
+  // Impact selection. The `key={productId}` remount in ConstellationPage clears this on a
+  // product switch, so no effect is needed to reset it.
+  const [selectedComponentId, setSelectedComponentId] = useState<string | null>(null);
+  const impactQuery = useImpact(productId, selectedComponentId);
+
+  // Derived off the SELECTION, not the query: clearing the selection must stop the tinting
+  // immediately even while the previous blast radius is still cached.
+  const impactedByComponent = useMemo<ReadonlyMap<string, ChangeLevel>>(
+    () =>
+      new Map(
+        selectedComponentId
+          ? (impactQuery.data?.impacted.map((entry) => [
+              entry.component_id,
+              entry.projected_change_level,
+            ]) ?? [])
+          : [],
+      ),
+    [selectedComponentId, impactQuery.data],
+  );
+  const latestRelease = releasesQuery.data?.[0];
+  const base = latestRelease?.product_version ?? DEFAULT_PRODUCT_BASE;
   const productVersion = derivedProductVersion(base, pinnedCount > 0);
+
+  // `change_level` is VERSION-scoped, not component-scoped: keying by component would paint
+  // the latest release's level onto whichever historical version the meridian is parked on.
+  const changeLevelByVersion = useMemo<ReadonlyMap<string, ChangeLevel | null>>(
+    () =>
+      new Map(
+        latestRelease?.components.map((component) => [
+          component.version_id,
+          component.change_level,
+        ]) ?? [],
+      ),
+    [latestRelease],
+  );
 
   // Live SSE overlay: pulsing/dimming sets fed into the SVG; ledger reconciles on release.cut.
   const live = useProductEvents(productId);
@@ -118,6 +155,11 @@ export function ConstellationWorkspace({
               onPositionChange={setPosition}
               freshVersionIds={live.freshVersionIds}
               rolledBackVersionIds={live.rolledBackVersionIds}
+              dependencies={graphQuery.data?.edges ?? []}
+              changeLevelByVersion={changeLevelByVersion}
+              selectedComponentId={selectedComponentId}
+              impactedByComponent={impactedByComponent}
+              onSelectComponent={setSelectedComponentId}
             />
             <p className={styles.hint}>
               Time flows left → right · the right edge is <b>now</b>. The bright line is a release
@@ -126,7 +168,13 @@ export function ConstellationWorkspace({
           </div>
 
           <aside className={styles.hud} aria-label="Release controls">
-            <ProductVersionReadout productVersion={productVersion} tick={position} />
+            <ProductVersionReadout
+              productVersion={productVersion}
+              tick={position}
+              bumpLevel={latestRelease?.bump_level}
+              bumpRationale={latestRelease?.bump_rationale}
+              atNow={position === axis.maxTick}
+            />
             <div className={styles.manifestCard}>
               <h3 className={styles.cardHeading}>Pinned manifest</h3>
               <ul className={styles.manifest}>

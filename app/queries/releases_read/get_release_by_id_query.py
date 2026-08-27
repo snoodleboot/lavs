@@ -9,7 +9,8 @@ from app.queries.releases_read.release_manifest_reader import ReleaseManifestRea
 from app.queries.releases_read.release_response_mapper import ReleaseResponseMapper
 
 _RELEASE_SELECT = (
-    "SELECT id, product_id, product_version, label, notes, created_at FROM releases WHERE id = ?"
+    "SELECT id, product_id, product_version, label, notes, created_at, "
+    "bump_level, bump_rationale FROM releases WHERE id = ?"
 )
 
 

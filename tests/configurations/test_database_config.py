@@ -16,6 +16,7 @@ def test_database_config_lists_core_tables() -> None:
         "versions",
         "releases",
         "release_components",
+        "component_dependencies",
         "users",
         "sessions",
         "email_verification_tokens",
@@ -52,6 +53,17 @@ def test_users_precede_their_child_tables() -> None:
     # Assert
     assert names.index("users") < names.index("sessions")
     assert names.index("users") < names.index("email_verification_tokens")
+
+
+def test_component_dependencies_follows_its_parents() -> None:
+    """component_dependencies must be declared after products and components so drops honour the FKs."""
+    # Act
+    config = load_database_config()
+    names = [table.name for table in config.database.tables]
+
+    # Assert
+    assert names.index("products") < names.index("component_dependencies")
+    assert names.index("components") < names.index("component_dependencies")
 
 
 def test_versions_table_declares_status_field() -> None:

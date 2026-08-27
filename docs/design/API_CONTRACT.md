@@ -110,6 +110,10 @@ query-param style is replaced). IDs are UUID strings.
 | GET | `/products/{id}/releases` | release ledger |
 | POST | `/products/{id}/releases` | **cut a release** (see §5) |
 | GET | `/releases/{id}` | a release + frozen manifest |
+| GET | `/products/{id}/graph` | dependency graph — nodes (components) + edges (P9, see §10) |
+| POST | `/products/{id}/dependencies` | add a dependency edge `{from_component_id, to_component_id}` (P9) |
+| DELETE | `/products/{id}/dependencies?from=&to=` | remove a dependency edge (P9) |
+| GET | `/products/{id}/impact?component=` | what-if: dependents a hypothetical major change would impact (P9) |
 | GET | `/products/{id}/events` | **SSE** live stream (see §6) |
 | GET | `/health` · `/ready` | liveness / readiness (Helm probes) |
 
@@ -133,9 +137,23 @@ query-param style is replaced). IDs are UUID strings.
   "product_version": "5.1.0",    // server-assigned, see §5
   "label": "Aurora 5.1",         // optional human label
   "created_at": "ISO-8601",
+  "bump_level": "minor",         // P9: derived bump — major|minor|patch|none (null on pre-P9 rows)
+  "bump_rationale": "{…}",       // P9: JSON explaining the derivation (null under the legacy policy)
   "components": [
-    { "component_id": "uuid", "name": "lavs-api", "version_id": "uuid", "version": "2.4.0" }
+    { "component_id": "uuid", "name": "lavs-api", "version_id": "uuid", "version": "2.4.0",
+      "change_level": "minor" }  // P9: this component's own change vs the prior manifest (null under legacy)
   ] }
+
+// Dependency edge (P9) — "from depends on to"
+{ "id": "uuid", "product_id": "uuid",
+  "from_component_id": "uuid", "to_component_id": "uuid", "created_at": "ISO-8601" }
+
+// Graph (P9) — GET /products/{id}/graph
+{ "product_id": "uuid", "nodes": [ …Component ], "edges": [ …Dependency ] }
+
+// Impact (P9) — GET /products/{id}/impact?component=X
+{ "component_id": "uuid",
+  "impacted": [ { "component_id": "uuid", "projected_change_level": "minor" } ] }
 
 // timeline (composite response for the Constellation view)
 { "product": { …Product },
@@ -153,7 +171,7 @@ query-param style is replaced). IDs are UUID strings.
 | 401 | `unauthorized` | no/invalid credential |
 | 403 | `forbidden` / `domain_not_allowed` | not permitted |
 | 404 | `not_found` | unknown id |
-| 409 | `conflict` | duplicate (name, email, etc.) |
+| 409 | `conflict` | duplicate (name, email, etc.); P9 dependency edge that is a self-edge, cross-product, duplicate, or would form a cycle |
 | 422 | `validation_error` | bad body (e.g. non-semver version) |
 
 ## 4. Version semantics
@@ -176,11 +194,19 @@ query-param style is replaced). IDs are UUID strings.
 
 Server behavior:
 1. Snapshot each component's current **`active`** version.
-2. **Auto-increment** the product version (server-owned counter; **default bump = minor**,
-   starting from the product's configured base). The client **cannot** set the version —
-   only an optional `label`.
+2. **Derive** the product version (server-owned; the client **cannot** set it). The bump is
+   chosen by the product's `bump_policy` (P9):
+   - `legacy` — an unconditional **minor** bump (the pre-P9 behaviour; existing products
+     default to this).
+   - `default` — classify each component's change against the previous release manifest
+     (`major`/`minor`/`patch`/`none`), propagate along the intra-product dependency graph,
+     and take the graph-wide maximum. A cut with **no material change derives `none`** and
+     repeats the current version (a distinct release row is still recorded). New products
+     use this policy.
+   The derived `bump_level`, a JSON `bump_rationale`, and each component's `change_level`
+   are recorded on the release.
 3. Persist an immutable `Release` + `release_components` pinning the exact `version_id`s.
-4. Emit a `release.cut` event on the SSE stream (§6).
+4. Emit a `release.cut` event on the SSE stream (§6), carrying `bump_level`.
 
 ```mermaid
 sequenceDiagram
@@ -188,8 +214,8 @@ sequenceDiagram
     participant API
     participant DB
     UI->>API: POST /products/{id}/releases {label?}  (+Idempotency-Key)
-    API->>DB: select active version per component
-    API->>API: product_version = bump_minor(current)
+    API->>DB: select active version per component + prior manifest + dependency edges
+    API->>API: product_version = apply(derive_bump(changes, graph, policy), current)
     API->>DB: insert Release + release_components (immutable)
     API-->>UI: 201 {Release with frozen manifest, product_version}
     API-->>UI: SSE event: release.cut
@@ -212,7 +238,14 @@ event: version.rolled_back
 data: { "component_id":"uuid", "version_id":"uuid", "reactivated_version_id":"uuid" }
 
 event: release.cut
-data: { "release": { …Release } }
+data: { "release": { …Release } }          // carries the derived bump_level (P9)
+
+event: dependency.added
+data: { "dependency": { …Dependency } }    // P9
+
+event: dependency.removed
+data: { "dependency": { "id":"uuid", "product_id":"uuid",
+                        "from_component_id":"uuid", "to_component_id":"uuid" } }  // P9
 ```
 
 FE handling: append a new **star** on `version.created`, dim/strike on `version.rolled_back`,
@@ -250,3 +283,31 @@ sequenceDiagram
 - Idempotency-Key retention window.
 - Org/RBAC model (deferred) — how products map to orgs/teams.
 - Whether `/products/{id}/timeline` needs pagination for very long histories.
+
+## 10. Dependency graph & derived versions (P9)
+
+A product's components can be wired into an **intra-product dependency graph** — a DAG whose
+edge `from → to` reads "`from` depends on `to`". The graph drives how a release's version is
+*derived* (§5) and powers an impact what-if.
+
+- **Edges** — `POST /products/{id}/dependencies` `{from_component_id, to_component_id}` (201,
+  returns the edge). `DELETE /products/{id}/dependencies?from=&to=` (204). Rejected with
+  **409** when the edge is a self-edge, crosses product boundaries, already exists, or would
+  introduce a **cycle**; **404** for an unknown product or component. Cycle rejection is done
+  in the app layer (portable across all four backends — no recursive CTE).
+- **Graph** — `GET /products/{id}/graph` → `{ product_id, nodes:[Component], edges:[Dependency] }`.
+- **Impact** — `GET /products/{id}/impact?component=X` → the transitive dependents a
+  hypothetical **major** change to `X` would touch, each with a `projected_change_level`.
+- **Derivation & propagation** — at cut time each component's own change is classified against
+  the previous manifest; a dependency's change contributes to its dependents under a
+  **contraction** policy (a dependency's `major` lifts a dependent to at most `minor`). Because
+  every dependency is itself a component already counted, the **product bump equals the maximum
+  own-change** for an intra-product graph — edges shape per-component `change_level`,
+  `bump_rationale`, and `/impact`, not the product version itself. Edge-driven cross-product
+  versioning is the P10 (cross-product composition) direction.
+- **Policy** — a product carries a `bump_policy` (`legacy` | `default`); see §5. There is no
+  API to change it yet (deferred): existing products stay `legacy`, new products are `default`.
+
+**Live updates:** `dependency.added` / `dependency.removed` SSE events (§6). As with all SSE
+frames, they are notifications — the REST `GET /graph` remains the source of truth, so a client
+that misses a frame re-syncs.

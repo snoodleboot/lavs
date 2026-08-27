@@ -2,7 +2,14 @@
 
 import pytest
 
-from app.domain.product_version import bump_minor, next_product_version
+from app.domain.product_version import (
+    apply_bump,
+    bump_major,
+    bump_minor,
+    bump_patch,
+    next_product_version,
+)
+from app.models.enums.bump_level import BumpLevel
 
 
 def test_bump_minor_increments_minor_and_resets_patch() -> None:
@@ -78,3 +85,31 @@ def test_next_product_version_bumps_latest_release() -> None:
 
     # Assert
     assert result == "5.4.0"
+
+
+def test_bump_major_increments_major_and_resets_rest() -> None:
+    """A major bump raises major by one and zeroes minor and patch."""
+    # Assert
+    assert bump_major("5.3.2") == "6.0.0"
+    assert bump_major("2.4.0-rc.1") == "3.0.0"
+
+
+def test_bump_patch_increments_patch() -> None:
+    """A patch bump raises patch by one and drops any prerelease."""
+    # Assert
+    assert bump_patch("5.3.2") == "5.3.3"
+    assert bump_patch("1.0.0-rc.1") == "1.0.1"
+
+
+def test_apply_bump_dispatches_on_level() -> None:
+    """apply_bump routes each level to the matching arithmetic."""
+    # Assert
+    assert apply_bump("5.1.0", BumpLevel.MAJOR) == "6.0.0"
+    assert apply_bump("5.1.0", BumpLevel.MINOR) == "5.2.0"
+    assert apply_bump("5.1.0", BumpLevel.PATCH) == "5.1.1"
+
+
+def test_apply_bump_none_leaves_version_unchanged() -> None:
+    """A NONE bump carries the same product version (G-P9d)."""
+    # Assert
+    assert apply_bump("5.1.0", BumpLevel.NONE) == "5.1.0"

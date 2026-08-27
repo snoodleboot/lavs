@@ -17,7 +17,7 @@ from app.models.responses.release_component_response_model import (
 # a parameter, so the statement stays fully parameterized.
 _MANIFEST_SELECT = (
     "SELECT rc.release_id, rc.component_id, c.name, rc.version_id, "
-    "v.major, v.minor, v.patch, v.prerelease "
+    "v.major, v.minor, v.patch, v.prerelease, rc.change_level "
     "FROM release_components rc "
     "JOIN components c ON rc.component_id = c.id "
     "JOIN versions v ON rc.version_id = v.id "
@@ -58,11 +58,13 @@ class ReleaseManifestReader:
         grouped: dict[str, list[ReleaseComponentResponseModel]] = {}
         for row in rows:
             release_id = str(row[0])
+            change_level = row[8]
             component = ReleaseComponentResponseModel(
                 component_id=str(row[1]),
                 name=str(row[2]),
                 version_id=str(row[3]),
                 version=self._version_string(row[4], row[5], row[6], row[7]),
+                change_level=None if change_level is None else str(change_level),
             )
             grouped.setdefault(release_id, []).append(component)
         return grouped

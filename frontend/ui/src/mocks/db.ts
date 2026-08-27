@@ -1,6 +1,12 @@
-import type { ComponentWithVersions, Principal, Product, Release } from '@/types';
+import type { ComponentWithVersions, Dependency, Principal, Product, Release } from '@/types';
 
-import { seedComponents, seedPrincipal, seedProduct, seedReleases } from './fixtures';
+import {
+  seedComponents,
+  seedDependencies,
+  seedPrincipal,
+  seedProduct,
+  seedReleases,
+} from './fixtures';
 
 // Mutable in-memory store backing the MSW handlers. Tests mutate it (e.g. cut a release)
 // and reset it between cases via resetDb() (wired in vitest.setup.ts).
@@ -8,6 +14,7 @@ import { seedComponents, seedPrincipal, seedProduct, seedReleases } from './fixt
 export interface MockDb {
   product: Product;
   components: ComponentWithVersions[];
+  dependencies: Dependency[];
   releases: Release[];
   principal: Principal | null;
   releaseCounter: number;
@@ -17,6 +24,7 @@ function freshDb(): MockDb {
   return {
     product: seedProduct(),
     components: seedComponents(),
+    dependencies: seedDependencies(),
     releases: seedReleases(),
     // Default to authenticated so component tests render the app; login tests override.
     principal: seedPrincipal,

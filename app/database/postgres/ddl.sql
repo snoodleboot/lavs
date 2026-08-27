@@ -14,11 +14,15 @@ CREATE TABLE IF NOT EXISTS products (
     name VARCHAR NOT NULL,
     description VARCHAR,
     base_version VARCHAR NOT NULL DEFAULT '0.0.0',
+    bump_policy VARCHAR NOT NULL DEFAULT 'legacy',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Idempotently upgrade databases created before base_version existed.
 ALTER TABLE products ADD COLUMN IF NOT EXISTS base_version VARCHAR DEFAULT '0.0.0';
+-- P9: per-product derived-bump policy. Existing rows default to 'legacy'
+-- (byte-identical to the pre-P9 minor bump); new products are created 'default'.
+ALTER TABLE products ADD COLUMN IF NOT EXISTS bump_policy VARCHAR DEFAULT 'legacy';
 
 CREATE TABLE IF NOT EXISTS components (
     id VARCHAR PRIMARY KEY,
@@ -45,14 +49,35 @@ CREATE TABLE IF NOT EXISTS releases (
     label VARCHAR,
     notes VARCHAR,
     idempotency_key VARCHAR,
+    bump_level VARCHAR,
+    bump_rationale VARCHAR,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+-- P9: the derived bump magnitude and its explanation, populated at cut time.
+ALTER TABLE releases ADD COLUMN IF NOT EXISTS bump_level VARCHAR;
+ALTER TABLE releases ADD COLUMN IF NOT EXISTS bump_rationale VARCHAR;
 
 CREATE TABLE IF NOT EXISTS release_components (
     release_id VARCHAR NOT NULL REFERENCES releases(id),
     component_id VARCHAR NOT NULL,
     version_id VARCHAR NOT NULL,
+    change_level VARCHAR,
     PRIMARY KEY (release_id, component_id)
+);
+-- P9: each component's own change classification within the release.
+ALTER TABLE release_components ADD COLUMN IF NOT EXISTS change_level VARCHAR;
+
+-- P9: product dependency graph — intra-product edges "from depends on to".
+-- Product-scoped; the unique key forbids duplicate edges. Self-edge, cross-
+-- product and cycle rejection are enforced in the application layer (portable,
+-- no recursive CTE, so the identical guard holds on every backend).
+CREATE TABLE IF NOT EXISTS component_dependencies (
+    id VARCHAR PRIMARY KEY,
+    product_id VARCHAR NOT NULL REFERENCES products(id),
+    from_component_id VARCHAR NOT NULL REFERENCES components(id),
+    to_component_id VARCHAR NOT NULL REFERENCES components(id),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE (product_id, from_component_id, to_component_id)
 );
 
 -- Auth (P4): password/session users and their opaque, hashed tokens.

@@ -10,6 +10,43 @@
   display: flex;
   align-items: baseline;
   justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* P9 derived bump of the latest cut release. */
+.bumpGroup {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  margin-inline-start: auto;
+}
+
+.bumpLabel {
+  font-size: 10px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+/* ▲ + the level in words: colour is never the only signal. */
+.bump {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+}
+
+.levelMajor {
+  color: var(--danger);
+}
+
+.levelMinor {
+  color: var(--warn);
+}
+
+.levelPatch {
+  color: var(--patch);
 }
 
 .title {
@@ -48,4 +85,11 @@
   line-height: 1.1;
   color: var(--meridian);
   text-shadow: 0 0 24px var(--meridian-glow);
+}
+
+.rationale {
+  margin: 8px 0 0;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--muted);
 }

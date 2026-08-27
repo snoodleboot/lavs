@@ -2,6 +2,7 @@
 
 from app.connections.db_session import DbSession
 from app.errors.conflict_error import ConflictError
+from app.models.enums.bump_policy import BumpPolicy
 from app.models.requests.create_product_model import CreateProductModel
 from app.models.responses.product_response_model import ProductResponseModel
 from app.models.types.ulid_id import new_ulid
@@ -39,8 +40,8 @@ class CreateProductQuery(Query[ProductResponseModel]):
 
         product_id = new_ulid()
         conn.execute(
-            "INSERT INTO products (id, name, description) VALUES (?, ?, ?)",
-            [product_id, data.name, data.description],
+            "INSERT INTO products (id, name, description, bump_policy) VALUES (?, ?, ?, ?)",
+            [product_id, data.name, data.description, BumpPolicy.DEFAULT.value],
         )
 
         row = conn.execute(

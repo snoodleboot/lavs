@@ -10,5 +10,8 @@ export const queryKeys = {
   releases: (productId: string) => ['products', productId, 'releases'] as const,
   release: (releaseId: string) => ['releases', releaseId] as const,
   components: (productId: string) => ['products', productId, 'components'] as const,
+  graph: (productId: string) => ['products', productId, 'graph'] as const,
+  impact: (productId: string, componentId: string) =>
+    ['products', productId, 'impact', componentId] as const,
   versions: (componentId: string) => ['components', componentId, 'versions'] as const,
 } as const;

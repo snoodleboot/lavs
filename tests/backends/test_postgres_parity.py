@@ -186,6 +186,8 @@ class TestReleaseParity:
             seed = self._seed_two_components(client)
             first = client.post(f"/products/{seed['product_id']}/releases", json={})
             assert first.json()["product_version"] == "0.1.0", first.text
+            # A minor component change drives the derived minor bump (default policy, P9).
+            _create_version(client, seed["api"]["component_id"], "2.5.0")
 
             # Act
             second = client.post(f"/products/{seed['product_id']}/releases", json={})

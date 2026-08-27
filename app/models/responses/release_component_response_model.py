@@ -16,6 +16,7 @@ class ReleaseComponentResponseModel(ResponseModel):
     name: str
     version_id: str
     version: str
+    change_level: str | None = None
 
     model_config = {
         "json_schema_extra": {
