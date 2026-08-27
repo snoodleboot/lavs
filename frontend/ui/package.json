@@ -17,7 +17,7 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "e2e": "playwright test",
-    "e2e:serve": "vite build && vite preview --port 5173 --strictPort",
+    "e2e:serve": "vite build && vite preview --host 127.0.0.1 --port 5173 --strictPort",
     "e2e:install": "playwright install --with-deps chromium"
   },
   "dependencies": {

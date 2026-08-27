@@ -22,7 +22,15 @@ export default defineConfig({
         // without a live backend. Live-SSE isn't reliably mockable in a service worker; it's
         // covered by the R3 hook/reducer unit tests.
         command: 'pnpm run e2e:serve',
+        // Bound explicitly to 127.0.0.1 by `e2e:serve`. Vite's default host is
+        // `localhost`, which on CI runners can resolve to ::1 first — Playwright
+        // then polls this IPv4 URL forever and fails with a bare
+        // "Timed out waiting 120000ms from config.webServer".
         url: 'http://127.0.0.1:5173',
+        // Surface the server's own output, so a startup failure shows up as the
+        // actual error rather than only as that timeout.
+        stdout: 'pipe',
+        stderr: 'pipe',
         reuseExistingServer: !process.env.CI,
         timeout: 120_000,
         env: { VITE_E2E_MOCK: '1' },
